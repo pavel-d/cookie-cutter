@@ -38,6 +38,7 @@ const destination = {
   projectId: "project",
   labelId: "label",
   stateId: "triage",
+  delegateId: "codex-agent",
 };
 const env: Parameters<typeof worker.fetch>[1] = {
   LINEAR_API_KEY: "test-linear-key",
@@ -46,6 +47,7 @@ const env: Parameters<typeof worker.fetch>[1] = {
   LINEAR_PROJECT_ID: "fd3c6688-5add-4c62-b1ae-b656cefa7fd4",
   LINEAR_LABEL_ID: "d51db1d1-ed11-48d8-bf1e-3106d86fdf13",
   LINEAR_STATE_ID: "5cdd95d1-9150-499d-b73b-32eb340e4ebb",
+  LINEAR_DELEGATE_ID: "d11cad3d-1771-40e4-aa8a-f2cc7e54994e",
 };
 
 function tracker(): IssueTracker {
@@ -245,6 +247,7 @@ describe("Linear contract adapter", () => {
       teamId: "team",
       projectId: "project",
       stateId: "triage",
+      delegateId: "codex-agent",
       labelIds: ["label"],
     });
   });
@@ -397,8 +400,9 @@ describe("Worker HTTP boundary", () => {
           String(url) === "https://api.linear.app/graphql" &&
           JSON.parse(init!.body as string).query.startsWith("mutation Report"),
       );
-      const description = JSON.parse(create![1]!.body as string).variables.input
-        .description;
+      const issueInput = JSON.parse(create![1]!.body as string).variables.input;
+      expect(issueInput.delegateId).toBe(env.LINEAR_DELEGATE_ID);
+      const description = issueInput.description;
       expect(description).toContain("2001:db8::20");
       expect(description).toContain("ActualBrowser/1.0");
       expect(description).not.toContain("spoofed-");

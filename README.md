@@ -73,6 +73,8 @@ The Worker adds the submitting client's public IP address and request user agent
 
 The Worker does not fetch the reported page URL or store captures separately. Reports and attachments, including IP address and browser information, follow Linear's access and retention settings. Treat HTML dumps as untrusted evidence: remove scripts and personal data before importing them into regression fixtures.
 
+New reports are automatically delegated to **@Codex** through Linear's `delegateId` field, configured by the Worker's `LINEAR_DELEGATE_ID` binding. Linear distinguishes agent delegation from human assignment. Delegation can start a Codex agent session; the report is created in Triage with the existing project and automated-report label. Existing issues are not reassigned.
+
 ## Reporting backend
 
 `backend/cloudflare.config.ts` defines the `cookie-cutter-reports` Worker, compatibility date, typed bindings, and observability. The Worker has no database or R2 bucket. File persistence belongs to Linear. Its submission use case uses a plain report model and an issue-tracker port; HTTP, Markdown and Linear GraphQL stay in adapters. `npm run backend:test` builds and executes the actual bundle in Cloudflare's workerd runtime with a fixture Linear gateway, checking authentication, validation, oversized uploads, attachments, issue routing and idempotency.

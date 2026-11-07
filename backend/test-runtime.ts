@@ -93,6 +93,10 @@ const runtime = new Miniflare({
             assert.ok(body.query.startsWith("mutation Report"));
             const input = body.variables.input as Record<string, unknown>;
             assert.equal(input.stateId, "5cdd95d1-9150-499d-b73b-32eb340e4ebb");
+            assert.equal(
+              input.delegateId,
+              "d11cad3d-1771-40e4-aa8a-f2cc7e54994e",
+            );
             assert.deepEqual(input.labelIds, [
               "d51db1d1-ed11-48d8-bf1e-3106d86fdf13",
             ]);

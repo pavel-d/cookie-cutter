@@ -13,6 +13,7 @@ interface Destination {
   projectId: string;
   labelId: string;
   stateId: string;
+  delegateId: string;
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -133,6 +134,7 @@ export class LinearIssueTracker implements IssueTracker {
       projectId: this.destination.projectId,
       labelIds: [this.destination.labelId],
       stateId: this.destination.stateId,
+      delegateId: this.destination.delegateId,
     };
     try {
       const data = await this.graphql(
