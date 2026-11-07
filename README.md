@@ -1,6 +1,6 @@
 # Cookie Cutter
 
-A Chrome extension that rejects non-essential cookies, handles confirmation steps, and closes promotional popups. It uses generic matching, skips ambiguous choices, and shows page and all-time dismissal counts.
+A Chrome extension that rejects non-essential cookies, handles confirmation steps, and removes promotional popups without clicking their controls. It uses generic matching, skips ambiguous choices, and shows page and all-time dismissal counts.
 
 ## Install locally
 

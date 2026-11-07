@@ -16,12 +16,14 @@ const captures = [
   { name: "ecoflow", clicks: ["reject all"] },
   {
     name: "ecoflow-teaser",
+    promotional: true,
     clicks: ["close"],
     closeSelector: ".email-subscription-popup__trigger-close",
     openSelector: ".email-subscription-popup__trigger-image-wrapper",
   },
   {
     name: "aliexpress-bestseller",
+    promotional: true,
     clicks: ["close"],
     closeSelector: "img[alt='close']",
     openSelector: "img:not([alt='close'])",
@@ -34,12 +36,14 @@ const captures = [
   },
   {
     name: "aliexpress-coupons",
+    promotional: true,
+    popupSelector: "#fixture > div > div",
     clicks: ["close"],
     closeSelector: "#fixture > div > div > div > div:last-child",
     openSelector: "#fixture > div > div > div > div:nth-child(3) > div",
   },
-  { name: "castlery", clicks: ["close dialog"] },
-  { name: "castlery-teaser", clicks: ["close teaser"] },
+  { name: "castlery", clicks: ["close dialog"], promotional: true },
+  { name: "castlery-teaser", clicks: ["close teaser"], promotional: true },
 ];
 
 function readCapture(name: string): string {
@@ -183,10 +187,13 @@ for (const capture of captures) {
       }
       await page.addScriptTag({ path: bundlePath });
       await page.clock.runFor(3000);
-      await expect(page.locator("#fixture > *")).toHaveCount(0);
+      await expect(
+        page.locator(capture.popupSelector ?? "#fixture > *"),
+      ).not.toBeVisible();
+      const expectedClicks = capture.promotional ? [] : capture.clicks;
       await expect(page.locator("#fixture")).toHaveAttribute(
         "data-clicks",
-        JSON.stringify(capture.clicks),
+        JSON.stringify(expectedClicks),
       );
       await expect(page.locator("#unrelated")).toBeVisible();
       if (variant === "captured") {
@@ -197,7 +204,7 @@ for (const capture of captures) {
       await page.clock.runFor(16000);
       await expect(page.locator("#fixture")).toHaveAttribute(
         "data-clicks",
-        JSON.stringify(capture.clicks),
+        JSON.stringify(expectedClicks),
       );
     });
   }
@@ -264,10 +271,7 @@ for (const imageLabel of ["Sale: Shop now", "BESTSELLERS"]) {
     await page.addScriptTag({ path: bundlePath });
     await page.clock.runFor(16000);
     await expect(page.locator("aside")).toHaveCount(0);
-    await expect(page.locator("body")).toHaveAttribute(
-      "data-clicks",
-      '["close"]',
-    );
+    await expect(page.locator("body")).toHaveAttribute("data-clicks", "[]");
     await expect(page.locator("#unrelated")).toBeVisible();
   });
 }

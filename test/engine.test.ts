@@ -49,6 +49,21 @@ describe("scan lifecycle", () => {
     expect(closed).toHaveBeenCalledOnce();
   });
 
+  it("removes and counts a promotional popup once without clicking its controls", async () => {
+    document.body.innerHTML =
+      '<aside style="position: fixed"><p>Get £50 off</p><button>Close offer</button></aside>';
+    const clicked = vi.fn();
+    document.querySelector("button")!.addEventListener("click", clicked);
+    const closed = vi.fn();
+    stop = startCookieDismissal(withSiteRules([]), closed);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(document.querySelector("aside")).toBeNull();
+    expect(closed).toHaveBeenCalledOnce();
+    expect(clicked).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * 2);
+    expect(closed).toHaveBeenCalledOnce();
+  });
+
   it("counts reject plus confirmation on the same banner as one closure", async () => {
     document.body.innerHTML =
       '<section class="cookie-banner"><p>We use cookies.</p><button>Reject all</button></section>';

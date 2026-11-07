@@ -118,6 +118,16 @@ export function runGenericHeuristics(
     };
   }
 
+  if (candidate.reason === "dismiss promotional popup" && candidate.popup) {
+    candidate.popup.remove();
+    return {
+      matched: true,
+      clicked: false,
+      reason: "promotional popup removed",
+      popup: candidate.popup,
+    };
+  }
+
   clickedElements.add(candidate.element);
   candidate.element.click();
   debugLog("clicked generic candidate", candidate.label, candidate.reason);

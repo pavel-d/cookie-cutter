@@ -25,9 +25,10 @@ describe("floating promotional offers", () => {
       document.querySelector("button")!.addEventListener("click", close);
 
       expect(runGenericHeuristics(matcherRules, new WeakSet()).clicked).toBe(
-        true,
+        false,
       );
-      expect(close).toHaveBeenCalledOnce();
+      expect(document.querySelector("aside")).toBeNull();
+      expect(close).not.toHaveBeenCalled();
       expect(open).not.toHaveBeenCalled();
     },
   );
@@ -58,9 +59,10 @@ describe("floating promotional offers", () => {
       document.querySelector("#email-subscription-popup"),
     );
     expect(runGenericHeuristics(matcherRules, new WeakSet()).clicked).toBe(
-      true,
+      false,
     );
-    expect(close).toHaveBeenCalledOnce();
+    expect(document.querySelector("#email-subscription-popup")).toBeNull();
+    expect(close).not.toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();
   });
 
@@ -104,8 +106,9 @@ describe("floating promotional offers", () => {
     const candidate = findBestCandidate(matcherRules);
     expect(candidate?.reason).toBe("dismiss promotional popup");
     expect(runGenericHeuristics(matcherRules, new WeakSet()).clicked).toBe(
-      true,
+      false,
     );
+    expect(document.querySelector("aside")).toBeNull();
     expect(open).not.toHaveBeenCalled();
   });
 
@@ -132,9 +135,10 @@ describe("floating promotional offers", () => {
       document.querySelector(".pop-picture")!.addEventListener("click", open);
 
       expect(runGenericHeuristics(matcherRules, new WeakSet()).clicked).toBe(
-        true,
+        false,
       );
-      expect(close).toHaveBeenCalledOnce();
+      expect(document.querySelector(".drogue-poplayer-modal")).toBeNull();
+      expect(close).not.toHaveBeenCalled();
       expect(open).not.toHaveBeenCalled();
     },
   );
