@@ -22,7 +22,7 @@
     "backend:build": "cd backend && cf build",
     "backend:test": "npm run backend:build && node --experimental-strip-types backend/test-runtime.ts",
     "backend:dev": "cd backend && cf dev",
-    "backend:deploy": "cd backend && cf deploy --prebuilt"
+    "backend:deploy": "cd backend && cf deploy --prebuilt --mode production"
   },
   "devDependencies": {
     "@linear/sdk": "^101.1.0",
