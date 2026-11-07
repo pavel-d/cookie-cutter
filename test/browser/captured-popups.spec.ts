@@ -299,3 +299,48 @@ test("discovers a newly attached nested shadow popup and respects hidden or iner
   await page.clock.runFor(600);
   await expect(page.locator("#outer")).toHaveAttribute("data-rejected", "true");
 });
+
+// PAV-88: closing the teaser hides only its trigger, leaving the popup wrapper
+// and its hidden marketing-consent form in the document.
+test("PAV-88 dismisses the subscription trigger without opening its signup form", async ({
+  page,
+}) => {
+  await page.route("**/*", (route) => route.abort());
+  await page.clock.install();
+  await page.setContent(readCapture("ecoflow-teaser"));
+  await page.evaluate(() => {
+    const popup = document.querySelector<HTMLElement>(
+      "#email-subscription-popup",
+    )!;
+    const trigger = popup.querySelector<HTMLElement>("a")!;
+    const form = popup.querySelector<HTMLElement>(
+      ".email-subscription-popup__wrapper",
+    )!;
+    popup.dataset.actions = "[]";
+    trigger.addEventListener("click", (event) => {
+      const target = event.target as Element;
+      const close = target.closest(".email-subscription-popup__trigger-close");
+      const actions = JSON.parse(popup.dataset.actions!) as string[];
+      actions.push(close ? "close" : "open");
+      popup.dataset.actions = JSON.stringify(actions);
+      if (close) {
+        event.preventDefault();
+        trigger.style.display = "none";
+      } else {
+        form.style.display = "block";
+      }
+    });
+    form.querySelector("button")!.addEventListener("click", () => {
+      popup.dataset.actions = "subscribed";
+    });
+  });
+  await page.addScriptTag({ path: bundlePath });
+  await page.clock.runFor(16000);
+  await expect(page.locator("#email-subscription-popup > a")).toBeHidden();
+  await expect(page.locator("#email-subscription-popup")).toHaveCount(1);
+  await expect(page.locator(".email-subscription-popup__wrapper")).toBeHidden();
+  await expect(page.locator("#email-subscription-popup")).toHaveAttribute(
+    "data-actions",
+    '["close"]',
+  );
+});
