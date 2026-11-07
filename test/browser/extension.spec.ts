@@ -1,12 +1,20 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { chromium, expect, test } from "@playwright/test";
 import { fixtureRulesDocument } from "./rules-bridge";
+import { testRulesSigner } from "../signing";
+import { buildExtension } from "../../scripts/build";
 
 test("unpacked Manifest V3 extension reports without token setup using real Chrome APIs", async ({}, testInfo) => {
   const profile = await mkdtemp(join(tmpdir(), "cookie-cutter-extension-"));
-  const extensionPath = resolve("dist");
+  const signer = testRulesSigner();
+  const initialSignedRules = signer.sign(fixtureRulesDocument.rules);
+  const extensionPath = testInfo.outputPath("extension");
+  await buildExtension({
+    outDir: extensionPath,
+    testPublicKey: signer.publicKey,
+  });
   const context = await chromium.launchPersistentContext(profile, {
     channel: "chromium",
     headless: true,
@@ -25,11 +33,11 @@ test("unpacked Manifest V3 extension reports without token setup using real Chro
       // Exercise the real HTTP/cache/alarm adapters with a controlled source.
       // DNS is blocked above so the test never contacts production.
       globalThis.fetch = async (input) => {
-        if (String(input) !== "https://cookie-cutter.devtty.me/rules/v1.json")
+        if (String(input) !== "https://cookie-cutter.devtty.me/rules/v2.json")
           throw new Error("Unexpected extension request");
         return Response.json(document);
       };
-    }, fixtureRulesDocument);
+    }, initialSignedRules);
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expect(popup.getByRole("textbox")).toHaveCount(0);
@@ -88,9 +96,10 @@ test("unpacked Manifest V3 extension reports without token setup using real Chro
     expect(
       await worker.evaluate(
         async () =>
-          (await chrome.storage.local.get("matchingRules")).matchingRules,
+          (await chrome.storage.local.get("signedMatchingRules"))
+            .signedMatchingRules,
       ),
-    ).toMatchObject({ document: { revision: fixtureRulesDocument.revision } });
+    ).toMatchObject({ document: { revision: initialSignedRules.revision } });
     expect(
       await worker.evaluate(
         async () =>
@@ -109,31 +118,58 @@ test("unpacked Manifest V3 extension reports without token setup using real Chro
       document.body.append(banner);
     });
     await expect(website.locator(".cookie-banner")).toBeVisible();
-    await worker.evaluate(async (document) => {
-      const updated = {
-        revision: "b".repeat(64),
-        rules: {
-          ...document.rules,
-          labels: {
-            ...document.rules.labels,
-            reject: [...document.rules.labels.reject, "skip optional cookies"],
-          },
-        },
-      };
+    const updated = signer.sign({
+      ...fixtureRulesDocument.rules,
+      labels: {
+        ...fixtureRulesDocument.rules.labels,
+        reject: [
+          ...fixtureRulesDocument.rules.labels.reject,
+          "skip optional cookies",
+        ],
+      },
+    });
+    const rejectedUpdates: string[] = [];
+    context.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        message.text().includes("Rules signature verification failed")
+      )
+        rejectedUpdates.push(message.text());
+    });
+    await worker.evaluate(
+      async (document) => {
+        globalThis.fetch = async () => Response.json(document);
+        await chrome.alarms.create("refresh-matching-rules", {
+          when: Date.now(),
+        });
+      },
+      { ...updated, signature: Buffer.alloc(64).toString("base64") },
+    );
+    await expect.poll(() => rejectedUpdates.length).toBeGreaterThan(0);
+    await expect(website.locator(".cookie-banner")).toBeVisible();
+    expect(
+      await worker.evaluate(
+        async () =>
+          (await chrome.storage.local.get("signedMatchingRules"))
+            .signedMatchingRules,
+      ),
+    ).toMatchObject({ document: { revision: initialSignedRules.revision } });
+    await worker.evaluate(async (updated) => {
       globalThis.fetch = async () => Response.json(updated);
       await chrome.alarms.create("refresh-matching-rules", {
         when: Date.now(),
       });
-    }, fixtureRulesDocument);
+    }, updated);
     await expect(website.locator(".cookie-banner")).toHaveCount(0);
     await expect
       .poll(() =>
         worker.evaluate(
           async () =>
-            (await chrome.storage.local.get("matchingRules")).matchingRules,
+            (await chrome.storage.local.get("signedMatchingRules"))
+              .signedMatchingRules,
         ),
       )
-      .toMatchObject({ document: { revision: "b".repeat(64) } });
+      .toMatchObject({ document: { revision: updated.revision } });
   } finally {
     await context.close();
     await rm(profile, { recursive: true, force: true });

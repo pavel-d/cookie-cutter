@@ -1,10 +1,11 @@
+import { UpdateRules, type ActiveRules } from "./update-rules";
 import {
-  UpdateRules,
-  parseRulesDocument,
-  type CachedRules,
-} from "./update-rules";
+  createRulesVerifier,
+  parseSignedRulesDocument,
+} from "./verify-signature";
+import { RULES_SIGNING_PUBLIC_KEY } from "./signing-key";
 
-export const RULES_ENDPOINT = "https://cookie-cutter.devtty.me/rules/v1.json";
+export const RULES_ENDPOINT = "https://cookie-cutter.devtty.me/rules/v2.json";
 const alarmName = "refresh-matching-rules";
 const refreshMinutes = 15;
 const maxRulesBytes = 512 * 1024;
@@ -17,8 +18,8 @@ export function registerRuleUpdates(): void {
     {
       async read() {
         await ready;
-        const { matchingRules } =
-          await chrome.storage.local.get("matchingRules");
+        const { signedMatchingRules: matchingRules } =
+          await chrome.storage.local.get("signedMatchingRules");
         if (matchingRules === undefined) return undefined;
         if (
           !matchingRules ||
@@ -30,12 +31,12 @@ export function registerRuleUpdates(): void {
         )
           throw new Error("Invalid cached rules.");
         return {
-          document: parseRulesDocument(matchingRules.document),
+          document: parseSignedRulesDocument(matchingRules.document),
           checkedAt: matchingRules.checkedAt,
         };
       },
       async write(value) {
-        await chrome.storage.local.set({ matchingRules: value });
+        await chrome.storage.local.set({ signedMatchingRules: value });
       },
     },
     {
@@ -71,15 +72,16 @@ export function registerRuleUpdates(): void {
           bytes.set(chunk, offset);
           offset += chunk.byteLength;
         }
-        return parseRulesDocument(
+        return parseSignedRulesDocument(
           JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
         );
       },
     },
+    createRulesVerifier(RULES_SIGNING_PUBLIC_KEY),
     Date.now,
   );
 
-  async function refresh(): Promise<CachedRules> {
+  async function refresh(): Promise<ActiveRules> {
     const previous = await updater.cached();
     const updated = await updater.refresh();
     if (previous?.document.revision !== updated.document.revision) {

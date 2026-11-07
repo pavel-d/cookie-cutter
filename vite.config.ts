@@ -1,7 +1,9 @@
 import { fileURLToPath } from "node:url";
 import { configDefaults, defineConfig } from "vitest/config";
+import { signedRulesPlugin } from "./scripts/signed-rules-plugin";
 
 export default defineConfig({
+  plugins: [signedRulesPlugin(true)],
   build: {
     outDir: "dist",
     emptyOutDir: true,

@@ -1,6 +1,6 @@
 {
   "name": "cookie-cutter",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -20,7 +20,7 @@
     "test:browser": "npm run build && playwright test",
     "test:fixtures": "vitest run test/fixture-rules.test.ts",
     "backend:build": "cd backend && cf build",
-    "backend:test": "npm run backend:build && node --experimental-strip-types backend/test-runtime.ts",
+    "backend:test": "npm run backend:build -- --mode test && node --experimental-strip-types backend/test-runtime.ts",
     "backend:dev": "cd backend && cf dev",
     "backend:deploy": "cd backend && cf deploy --prebuilt --mode production"
   },

@@ -51,7 +51,7 @@ function boundedBody(request: Request): {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (request.method === "GET" && url.pathname === "/rules/v1.json")
+    if (request.method === "GET" && url.pathname === "/rules/v2.json")
       return rulesResponse(request);
     if (request.method === "GET" && url.pathname === "/health")
       return json({

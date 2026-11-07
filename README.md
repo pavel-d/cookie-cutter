@@ -26,7 +26,7 @@ npx playwright install chromium
 npm run check
 ```
 
-Edit [rules/matchers.json](rules/matchers.json) to update matching rules. Merging to `main` triggers Cloudflare compilation and deployment to `cookie-cutter.devtty.me/rules/v1.json`. Extensions check at browser startup and every 15 minutes, retain the last valid rules offline, and apply changes to open pages. Install version 0.4.0 once to enable this; later rule updates need no extension reload.
+Edit [rules/matchers.json](rules/matchers.json) to update matching rules. Merging to `main` triggers Cloudflare compilation, signing and deployment to `cookie-cutter.devtty.me/rules/v2.json`. Version 0.5.0 verifies each file's SHA-256 hash and signature against its pinned public key before use. Extensions check at startup and every 15 minutes, retain verified rules offline, and apply changes to open pages. Upgrade once; later rule updates need no reload.
 
 The reporting backend runs at `cookie-cutter.devtty.me`.
 
