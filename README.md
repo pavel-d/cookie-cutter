@@ -28,4 +28,4 @@ npm run check
 
 Checks cover formatting, TypeScript, extension and backend builds, unit tests, Chrome/Chromium integration tests, and Cloudflare runtime tests. GitHub Actions runs them on every push and pull request and uploads a tested extension ZIP. Store publishing and extension auto-updates are not configured.
 
-The reporting backend runs at `cookie-cutter.devtty.me`; infrastructure, Vault credentials and deployment live in [home-ops](https://github.com/pavel-d/home-ops).
+The reporting backend runs at `cookie-cutter.devtty.me`.
