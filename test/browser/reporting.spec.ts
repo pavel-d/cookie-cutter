@@ -117,7 +117,7 @@ test("Escape cancels without collecting page HTML", async ({ page }) => {
   ).toEqual([{ type: "selection-cancelled" }]);
 });
 
-test("extension menu exposes capture disclosure and the issue link without setup", async ({
+test("extension menu confirms the report ID without a Linear link", async ({
   page,
 }, testInfo) => {
   await page.setContent(readFileSync(resolve("dist/popup.html"), "utf8"));
@@ -161,9 +161,8 @@ test("extension menu exposes capture disclosure and the issue link without setup
   await expect(page.locator(".detail")).toContainText(
     "HTML may include personal information.",
   );
-  await expect(
-    page.getByRole("link", { name: "Report sent · TEST-1" }),
-  ).toHaveAttribute("href", "https://linear.app/example/issue/TEST-1");
+  await expect(page.locator("#status")).toHaveText("Report sent · TEST-1");
+  await expect(page.getByRole("link")).toHaveCount(0);
   await expect(page.getByRole("textbox")).toHaveCount(0);
   await expect(page.locator("#page-closed")).toHaveText("3");
   await expect(page.locator("#total-closed")).toHaveText("128");

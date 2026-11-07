@@ -28,12 +28,7 @@ function render(status: ReportStatus): void {
   reportButton.disabled = status.phase === "sending";
   statusElement.replaceChildren();
   if (status.phase === "sent") {
-    const link = document.createElement("a");
-    link.textContent = `Report sent · ${status.receipt.identifier}`;
-    link.href = status.receipt.url;
-    link.target = "_blank";
-    link.rel = "noreferrer";
-    statusElement.append(link);
+    statusElement.textContent = `Report sent · ${status.receipt.identifier}`;
   } else {
     statusElement.textContent = {
       idle: "",
