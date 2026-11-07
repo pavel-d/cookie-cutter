@@ -1,3 +1,4 @@
+import { withSiteRules } from "./helpers";
 import { executeDismissal } from "../src/engine";
 import { ruleMatches, sortRules } from "../src/engine/rules";
 import {
@@ -30,7 +31,8 @@ describe("rule execution", () => {
     document.querySelector("#visible")!.addEventListener("click", clicked);
     const rule = makeRule([clickSelector("reject", [".reject"])]);
     expect(
-      (await executeDismissal([rule], createDismissalState())).clicked,
+      (await executeDismissal(withSiteRules([rule]), createDismissalState()))
+        .clicked,
     ).toBe(true);
     expect(clicked).toHaveBeenCalledOnce();
   });
@@ -44,7 +46,7 @@ describe("rule execution", () => {
         "click",
       );
       const result = await executeDismissal(
-        [makeRule([clickSelector("reject", ["#reject"])])],
+        withSiteRules([makeRule([clickSelector("reject", ["#reject"])])]),
         createDismissalState(),
       );
       expect(result.clicked).toBe(false);
@@ -60,7 +62,7 @@ describe("rule execution", () => {
       "click",
     );
     const result = await executeDismissal(
-      [makeRule([clickSelector("missing", ["#missing"])])],
+      withSiteRules([makeRule([clickSelector("missing", ["#missing"])])]),
       createDismissalState(),
     );
     expect(result).toMatchObject({
@@ -91,10 +93,12 @@ describe("rule execution", () => {
       clickSelector("reject", ["#reject"], { maxWaitMs: 500 }),
     ]);
     const state = createDismissalState();
-    const result = executeDismissal([rule], state);
+    const result = executeDismissal(withSiteRules([rule]), state);
     await vi.advanceTimersByTimeAsync(300);
     expect((await result).clicked).toBe(true);
-    expect((await executeDismissal([rule], state)).clicked).toBe(false);
+    expect((await executeDismissal(withSiteRules([rule]), state)).clicked).toBe(
+      false,
+    );
     expect(manageClick).toHaveBeenCalledOnce();
     expect(rejectClick).toHaveBeenCalledOnce();
   });
@@ -111,13 +115,17 @@ describe("rule execution", () => {
       clickSelector("save", ["#save"]),
     ]);
     const state = createDismissalState();
-    expect((await executeDismissal([rule], state)).clicked).toBe(true);
+    expect((await executeDismissal(withSiteRules([rule]), state)).clicked).toBe(
+      true,
+    );
     document.body.innerHTML = '<button id="save">Save choices</button>';
     const saveClick = vi.spyOn(
       document.querySelector<HTMLElement>("#save")!,
       "click",
     );
-    expect((await executeDismissal([rule], state)).clicked).toBe(true);
+    expect((await executeDismissal(withSiteRules([rule]), state)).clicked).toBe(
+      true,
+    );
     expect(manageClick).toHaveBeenCalledOnce();
     expect(saveClick).toHaveBeenCalledOnce();
   });
@@ -128,7 +136,10 @@ describe("rule execution", () => {
     const rule = makeRule([
       clickSelector("missing", ["#missing"], { maxWaitMs: 250 }),
     ]);
-    const result = executeDismissal([rule], createDismissalState());
+    const result = executeDismissal(
+      withSiteRules([rule]),
+      createDismissalState(),
+    );
     await vi.advanceTimersByTimeAsync(250);
     expect(await result).toMatchObject({
       matched: true,
@@ -143,7 +154,9 @@ describe("rule execution", () => {
     document.body.innerHTML = '<div id="banner"></div>';
     const controller = new AbortController();
     const result = executeDismissal(
-      [makeRule([clickSelector("reject", ["#reject"], { maxWaitMs: 500 })])],
+      withSiteRules([
+        makeRule([clickSelector("reject", ["#reject"], { maxWaitMs: 500 })]),
+      ]),
       createDismissalState(),
       controller.signal,
     );
@@ -165,7 +178,7 @@ describe("rule execution", () => {
     expect(
       (
         await executeDismissal(
-          [makeRule([clickText("reject", ["Reject all"])])],
+          withSiteRules([makeRule([clickText("reject", ["Reject all"])])]),
           createDismissalState(),
         )
       ).clicked,
@@ -179,7 +192,8 @@ describe("rule execution", () => {
       clickText("reject", ["Reject all"], { withinSelectors: [".panel"] }),
     ]);
     expect(
-      (await executeDismissal([rule], createDismissalState())).clicked,
+      (await executeDismissal(withSiteRules([rule]), createDismissalState()))
+        .clicked,
     ).toBe(true);
   });
 });
@@ -215,9 +229,13 @@ describe("rule matching", () => {
     rule.match.pathPattern = /^\/article/;
     const state = createDismissalState();
     window.history.replaceState({}, "", "/article");
-    expect((await executeDismissal([rule], state)).clicked).toBe(true);
+    expect((await executeDismissal(withSiteRules([rule]), state)).clicked).toBe(
+      true,
+    );
     window.history.replaceState({}, "", "/other");
-    expect((await executeDismissal([rule], state)).matched).toBe(false);
+    expect((await executeDismissal(withSiteRules([rule]), state)).matched).toBe(
+      false,
+    );
   });
 
   it("sorts enabled rules by descending priority without changing the registry", () => {

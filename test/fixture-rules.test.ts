@@ -1,3 +1,4 @@
+import { withSiteRules } from "./helpers";
 import { executeDismissal } from "../src/engine";
 import {
   byDomain,
@@ -47,7 +48,10 @@ describe("site-specific rules", () => {
       ],
     });
 
-    const result = await executeDismissal([rule], createDismissalState());
+    const result = await executeDismissal(
+      withSiteRules([rule]),
+      createDismissalState(),
+    );
 
     expect(result.clicked).toBe(true);
     if (!result.matched) {

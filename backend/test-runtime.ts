@@ -151,6 +151,21 @@ function form(
 }
 
 try {
+  const rulesResponse = await runtime.dispatchFetch(
+    "https://reports.example/rules/v1.json",
+  );
+  assert.equal(rulesResponse.status, 200);
+  const publishedRules = (await rulesResponse.json()) as {
+    revision: string;
+    rules: { labels: { reject: string[] } };
+  };
+  assert.ok(publishedRules.rules.labels.reject.includes("reject all"));
+  assert.match(publishedRules.revision, /^[a-f0-9]{64}$/);
+  const notModified = await runtime.dispatchFetch(
+    "https://reports.example/rules/v1.json",
+    { headers: { "If-None-Match": rulesResponse.headers.get("ETag")! } },
+  );
+  assert.equal(notModified.status, 304);
   const health = await runtime.dispatchFetch("https://reports.example/health");
   assert.equal(health.status, 200);
   assert.equal(((await health.json()) as { ready: boolean }).ready, true);

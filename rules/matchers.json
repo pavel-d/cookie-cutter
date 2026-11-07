@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "labels": {
+    "consent": ["cookie", "consent", "legitimate interest"],
+    "reject": [
+      "reject",
+      "reject all",
+      "reject all cookies",
+      "reject non-essential",
+      "reject non essential",
+      "reject non-essential cookies",
+      "reject non essential cookies",
+      "decline",
+      "decline all",
+      "deny",
+      "deny all",
+      "necessary only",
+      "necessary cookies only",
+      "essential only",
+      "essential cookies only",
+      "use necessary cookies only",
+      "continue without accepting"
+    ],
+    "preferences": [
+      "preferences",
+      "manage preferences",
+      "manage settings",
+      "cookie settings",
+      "cookie preferences",
+      "manage cookies",
+      "customize",
+      "customise",
+      "customize cookies",
+      "customise cookies",
+      "privacy settings"
+    ],
+    "close": [
+      "close",
+      "close dialog",
+      "close teaser",
+      "close offer",
+      "close promotion",
+      "dismiss",
+      "no thanks",
+      "not now",
+      "hide this message"
+    ],
+    "offerClose": ["close teaser", "close offer", "close promotion"],
+    "icons": ["x", "×", "✕", "✖"],
+    "nonEssential": ["non-essential", "non essential"]
+  },
+  "patterns": {
+    "closeIdentity": "\\b(?:close|dismiss)\\b",
+    "popupIdentity": "\\b(?:popup|pop up|poplayer|pop layer|modal|teaser)\\b",
+    "excludedContext": "\\b(?:cart|basket|checkout|account|login|sign in|chat|support|help|search|gallery|lightbox|zoom|viewer|carousel)\\b",
+    "promotionalMedia": "\\b(?:newsletter|subscription|subscribe|promotions?|promotional|promo|coupons?|discounts?|sale|offers?|rewards?|bestsellers?|best sellers)\\b",
+    "consentIdentity": "cookie|consent",
+    "consentRegion": "banner|notice|consent",
+    "confirmedChoice": "you(?: have|'ve) (?:rejected|accepted)\\b.*cookies",
+    "necessaryOnly": "(?:we (?:only use|use only) (?:strictly )?(?:necessary|essential) cookies)",
+    "strictlyNecessary": "strictly necessary cookies",
+    "noOtherCookies": "will not use any other cookies",
+    "signup": "\\b(?:subscribe|newsletter|mailing list|sign up|signing up)\\b",
+    "incentive": "\\b(?:rewards?|welcome gift|discount|first order|exclusive offers?)\\b",
+    "discount": "(?:[£$€]\\s*\\d+(?:[.,]\\d+)*|\\d+(?:[.,]\\d+)*\\s*%)\\s*off",
+    "rewards": "\\b(?:redeem|claim) (?:your )?rewards?\\b"
+  },
+  "selectors": {
+    "closeTargets": "button, a, input[type='button'], input[type='submit'], [role='button'], [class], [id], [title], img[alt]",
+    "headings": "h1, h2, h3, [role='heading']",
+    "formControls": "input, select, textarea",
+    "media": "img, [role='img']",
+    "overlay": "dialog, [role='dialog'], [aria-modal='true']",
+    "consentRegion": "[role='region'], [role='alert']",
+    "email": "input[type='email'], input[autocomplete='email']"
+  },
+  "threshold": 7,
+  "sites": []
+}

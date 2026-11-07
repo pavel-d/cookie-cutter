@@ -1,3 +1,4 @@
+import { withSiteRules } from "./helpers";
 import { startCookieDismissal } from "../src/engine";
 import { OBSERVER_WINDOW_MS, SCAN_INTERVAL_MS } from "../src/rules/constants";
 import { clickSelector, defineRule } from "../src/rules/helpers";
@@ -20,7 +21,7 @@ describe("scan lifecycle", () => {
       '<section class="cookie-banner"><p>We use cookies.</p><button>Reject all</button></section>';
     const closed = vi.fn();
     const banner = document.querySelector<HTMLElement>("section")!;
-    stop = startCookieDismissal([], closed);
+    stop = startCookieDismissal(withSiteRules([]), closed);
     await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * 2);
     expect(closed).not.toHaveBeenCalled();
     banner.remove();
@@ -41,7 +42,7 @@ describe("scan lifecycle", () => {
       });
     });
     const closed = vi.fn();
-    stop = startCookieDismissal([], closed);
+    stop = startCookieDismissal(withSiteRules([]), closed);
     await vi.advanceTimersByTimeAsync(0);
     expect(closed).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
@@ -60,7 +61,7 @@ describe("scan lifecycle", () => {
         .addEventListener("click", () => banner.remove());
     });
     const closed = vi.fn();
-    stop = startCookieDismissal([], closed);
+    stop = startCookieDismissal(withSiteRules([]), closed);
     await vi.advanceTimersByTimeAsync(0);
     expect(closed).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * 2);
@@ -73,7 +74,7 @@ describe("scan lifecycle", () => {
     banner.hidden = true;
     const clicked = vi.fn();
     document.querySelector("#reject-all")!.addEventListener("click", clicked);
-    stop = startCookieDismissal([]);
+    stop = startCookieDismissal(withSiteRules([]));
     await vi.advanceTimersByTimeAsync(0);
     expect(clicked).not.toHaveBeenCalled();
     banner.hidden = false;
@@ -82,7 +83,7 @@ describe("scan lifecycle", () => {
   });
 
   it("does not starve scans while the page changes continuously", async () => {
-    stop = startCookieDismissal([]);
+    stop = startCookieDismissal(withSiteRules([]));
     await vi.advanceTimersByTimeAsync(0);
     document.body.innerHTML = loadFixture("simple-banner.html");
     const clicked = vi.fn();
@@ -95,7 +96,7 @@ describe("scan lifecycle", () => {
   });
 
   it("continues looking for late banners after unrelated early mutations", async () => {
-    stop = startCookieDismissal([]);
+    stop = startCookieDismissal(withSiteRules([]));
     await vi.advanceTimersByTimeAsync(0);
     for (let index = 0; index < 7; index += 1) {
       document.body.append(document.createElement("span"));
@@ -134,7 +135,7 @@ describe("scan lifecycle", () => {
         clickSelector("reject", ["#reject"], { maxWaitMs: 2000 }),
       ],
     });
-    stop = startCookieDismissal([rule]);
+    stop = startCookieDismissal(withSiteRules([rule]));
     await vi.advanceTimersByTimeAsync(0);
     document.body.append(document.createElement("span"));
     await vi.advanceTimersByTimeAsync(2200);
@@ -143,7 +144,7 @@ describe("scan lifecycle", () => {
   });
 
   it("cancels a queued rescan at the observation deadline", async () => {
-    stop = startCookieDismissal([]);
+    stop = startCookieDismissal(withSiteRules([]));
     await vi.advanceTimersByTimeAsync(OBSERVER_WINDOW_MS - 100);
     document.body.innerHTML = loadFixture("simple-banner.html");
     const clicked = vi.fn();
@@ -165,7 +166,7 @@ describe("scan lifecycle", () => {
         }),
       ],
     });
-    stop = startCookieDismissal([rule]);
+    stop = startCookieDismissal(withSiteRules([rule]));
     await vi.advanceTimersByTimeAsync(OBSERVER_WINDOW_MS);
     document.querySelector("#banner")!.innerHTML =
       '<button id="reject">Reject all</button>';
@@ -179,7 +180,7 @@ describe("scan lifecycle", () => {
   });
 
   it("clears scanning timers when the page is left", async () => {
-    stop = startCookieDismissal([]);
+    stop = startCookieDismissal(withSiteRules([]));
     await vi.advanceTimersByTimeAsync(0);
     window.dispatchEvent(new Event("pagehide"));
     document.body.innerHTML = loadFixture("simple-banner.html");
@@ -200,7 +201,7 @@ describe("scan lifecycle", () => {
       match: { domains: ["demo.test"], selectors: ["["] },
       steps: [],
     });
-    stop = startCookieDismissal([rule]);
+    stop = startCookieDismissal(withSiteRules([rule]));
     await vi.advanceTimersByTimeAsync(0);
     expect(error).toHaveBeenCalledWith(
       "[cookie-cutter] Dismissal failed",

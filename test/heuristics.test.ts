@@ -1,4 +1,4 @@
-import { DEFAULT_THRESHOLD } from "../src/rules/constants";
+import { matcherRules } from "./helpers";
 import {
   findBestCandidate,
   runGenericHeuristics,
@@ -14,12 +14,13 @@ describe("generic heuristics", () => {
     expect(button).toBeInstanceOf(HTMLElement);
 
     const candidate = scoreCandidate(
+      matcherRules,
       button as HTMLElement,
       document.body.textContent?.toLowerCase() ?? "",
     );
 
     expect(candidate).not.toBeNull();
-    expect(candidate?.score).toBeGreaterThanOrEqual(DEFAULT_THRESHOLD);
+    expect(candidate?.score).toBeGreaterThanOrEqual(matcherRules.threshold);
   });
 
   it("ignores accept buttons even inside a consent banner", () => {
@@ -29,6 +30,7 @@ describe("generic heuristics", () => {
     expect(button).toBeInstanceOf(HTMLElement);
 
     const candidate = scoreCandidate(
+      matcherRules,
       button as HTMLElement,
       document.body.textContent?.toLowerCase() ?? "",
     );
@@ -39,7 +41,7 @@ describe("generic heuristics", () => {
   it("finds the best reject candidate from a realistic banner", () => {
     document.body.innerHTML = loadFixture("simple-banner.html");
 
-    const candidate = findBestCandidate();
+    const candidate = findBestCandidate(matcherRules);
 
     expect(candidate).not.toBeNull();
     expect(candidate?.label).toContain("reject all");
@@ -48,7 +50,7 @@ describe("generic heuristics", () => {
   it("skips unrelated privacy copy that is not a banner", () => {
     document.body.innerHTML = loadFixture("false-positive.html");
 
-    const candidate = findBestCandidate();
+    const candidate = findBestCandidate(matcherRules);
 
     expect(candidate).toBeNull();
   });
@@ -57,7 +59,7 @@ describe("generic heuristics", () => {
     "supports the explicit reject label %s",
     (label) => {
       document.body.innerHTML = `<div role="dialog"><p>We use cookies.</p><button>${label}</button></div>`;
-      expect(findBestCandidate()?.label).toBe(label.toLowerCase());
+      expect(findBestCandidate(matcherRules)?.label).toBe(label.toLowerCase());
     },
   );
 
@@ -68,30 +70,34 @@ describe("generic heuristics", () => {
     "Reject application",
   ])("does not infer rejection from the label %s", (label) => {
     document.body.innerHTML = `<div role="dialog"><p>We use cookies.</p><button>${label}</button></div>`;
-    expect(findBestCandidate()).toBeNull();
+    expect(findBestCandidate(matcherRules)).toBeNull();
   });
 
   it("ignores reject actions in ordinary page content even with long cookie copy", () => {
     document.body.innerHTML = `<main><p>${"Cookie policy information. ".repeat(20)}</p><button>Reject all</button></main>`;
-    expect(findBestCandidate()).toBeNull();
+    expect(findBestCandidate(matcherRules)).toBeNull();
   });
 
   it("opens preferences within consent UI without treating it as a rejection", () => {
     document.body.innerHTML =
       '<div role="dialog"><p>We use cookies.</p><button>Manage preferences</button></div>';
-    expect(findBestCandidate()).toMatchObject({
+    expect(findBestCandidate(matcherRules)).toMatchObject({
       label: "manage preferences",
       reason: "open cookie preferences",
     });
     expect(
-      scoreCandidate(document.querySelector("button")!, "we use cookies"),
+      scoreCandidate(
+        matcherRules,
+        document.querySelector("button")!,
+        "we use cookies",
+      ),
     ).toBeNull();
   });
 
   it("does not use unrelated page copy as consent context", () => {
     document.body.innerHTML =
       '<main>Cookie policy</main><div role="dialog"><p>Reject this invitation?</p><button>Reject</button></div>';
-    expect(findBestCandidate()).toBeNull();
+    expect(findBestCandidate(matcherRules)).toBeNull();
   });
 
   it("clicks each element once and allows another banner with the same label", () => {
@@ -100,15 +106,15 @@ describe("generic heuristics", () => {
     const first = document.querySelector<HTMLElement>("#reject-all")!;
     const firstClick = vi.fn();
     first.addEventListener("click", firstClick);
-    expect(runGenericHeuristics(clicked).clicked).toBe(true);
-    expect(runGenericHeuristics(clicked).clicked).toBe(false);
+    expect(runGenericHeuristics(matcherRules, clicked).clicked).toBe(true);
+    expect(runGenericHeuristics(matcherRules, clicked).clicked).toBe(false);
     expect(firstClick).toHaveBeenCalledOnce();
 
     const second = first.cloneNode(true) as HTMLElement;
     first.after(second);
     const secondClick = vi.fn();
     second.addEventListener("click", secondClick);
-    expect(runGenericHeuristics(clicked).clicked).toBe(true);
+    expect(runGenericHeuristics(matcherRules, clicked).clicked).toBe(true);
     expect(secondClick).toHaveBeenCalledOnce();
   });
 });

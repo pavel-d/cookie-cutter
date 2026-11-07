@@ -15,6 +15,7 @@ import type {
   ExecutionResult,
   RuleStep,
 } from "../types";
+import type { MatcherRules } from "../rules/ruleset";
 
 function domainMatches(hostname: string, expectedDomain: string): boolean {
   return hostname === expectedDomain || hostname.endsWith(`.${expectedDomain}`);
@@ -123,6 +124,7 @@ async function waitForStepTarget(
 }
 
 export async function runMatchingRule(
+  matchers: MatcherRules,
   rules: CookieRule[],
   context: DetectionContext,
   progress: Map<CookieRule, number>,
@@ -164,8 +166,8 @@ export async function runMatchingRule(
       }
       if (index === rule.steps.length - 1)
         popup =
-          findConsentContainer(element) ??
-          findPromotionalContainer(element) ??
+          findConsentContainer(matchers, element) ??
+          findPromotionalContainer(matchers, element) ??
           undefined;
       element.click();
       clicked = true;

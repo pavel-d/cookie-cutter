@@ -2,12 +2,14 @@ import { validateReport, type Report, type ReportReceipt } from "./report";
 import { REPORT_ENDPOINT, REPORT_TOKEN } from "./http";
 import type { ExtensionMessage, PageCapture, ReportStatus } from "./protocol";
 import { registerStats } from "./stats-background";
+import { registerRuleUpdates } from "../rules/background";
 import {
   showReportNotification,
   type ReportNotification,
 } from "./notification";
 
 registerStats();
+registerRuleUpdates();
 
 const ready = chrome.storage.session.setAccessLevel({
   accessLevel: "TRUSTED_CONTEXTS",

@@ -1,4 +1,4 @@
-import { DEFAULT_THRESHOLD, REJECT_LABELS } from "../rules/constants";
+import type { MatcherRules } from "../rules/ruleset";
 import { debugLog } from "./debug";
 import {
   findVisibleClickableTargets,
@@ -12,23 +12,22 @@ import {
   findPromotionalContainer,
   findVisibleCloseTargets,
   getCloseLabel,
-  PREFERENCE_LABELS,
 } from "./popups";
 import type { ClickCandidate, ExecutionResult } from "../types";
 
 export function scoreCandidate(
+  rules: MatcherRules,
   element: HTMLElement,
   containerText: string,
 ): ClickCandidate | null {
   const label = getElementLabel(element);
-  if (!REJECT_LABELS.includes(label)) {
+  if (!rules.labels.reject.includes(label)) {
     return null;
   }
 
   const score =
-    DEFAULT_THRESHOLD +
-    (containerText.includes("non-essential") ||
-    containerText.includes("non essential")
+    rules.threshold +
+    (rules.labels.nonEssential.some((label) => containerText.includes(label))
       ? 1
       : 0) +
     (element.tagName === "BUTTON" ? 1 : 0);
@@ -37,48 +36,53 @@ export function scoreCandidate(
 }
 
 export function findBestCandidate(
+  rules: MatcherRules,
   clickedElements: WeakSet<HTMLElement> = new WeakSet(),
 ): ClickCandidate | null {
   let best: ClickCandidate | null = null;
 
-  const labels = [...REJECT_LABELS, ...PREFERENCE_LABELS];
+  const labels = [...rules.labels.reject, ...rules.labels.preferences];
   const targets = new Set(
     getDetectionRoots().flatMap((root) => [
       ...findVisibleClickableTargets(root, labels),
-      ...findVisibleCloseTargets(root),
+      ...findVisibleCloseTargets(rules, root),
     ]),
   );
   for (const element of targets) {
     if (clickedElements.has(element)) {
       continue;
     }
-    const closeLabel = getCloseLabel(element);
+    const closeLabel = getCloseLabel(rules, element);
     const label = closeLabel ?? getElementLabel(element);
-    const container = findConsentContainer(element);
+    const container = findConsentContainer(rules, element);
     const promotion =
       !container && closeLabel !== null
-        ? findPromotionalContainer(element)
+        ? findPromotionalContainer(rules, element)
         : null;
     let candidate: ClickCandidate | null = null;
     if (container) {
-      candidate = scoreCandidate(element, normalizeText(container.textContent));
+      candidate = scoreCandidate(
+        rules,
+        element,
+        normalizeText(container.textContent),
+      );
       if (
         !candidate &&
         closeLabel !== null &&
-        canCloseConsentNotice(container)
+        canCloseConsentNotice(rules, container)
       ) {
         candidate = {
           element,
           label,
-          score: DEFAULT_THRESHOLD - 1,
+          score: rules.threshold - 1,
           reason: "dismiss cookie notice",
         };
       }
-      if (!candidate && PREFERENCE_LABELS.includes(label)) {
+      if (!candidate && rules.labels.preferences.includes(label)) {
         candidate = {
           element,
           label,
-          score: DEFAULT_THRESHOLD - 2,
+          score: rules.threshold - 2,
           reason: "open cookie preferences",
         };
       }
@@ -87,7 +91,7 @@ export function findBestCandidate(
       candidate = {
         element,
         label,
-        score: DEFAULT_THRESHOLD - 3,
+        score: rules.threshold - 3,
         reason: "dismiss promotional popup",
       };
     }
@@ -102,9 +106,10 @@ export function findBestCandidate(
 }
 
 export function runGenericHeuristics(
+  rules: MatcherRules,
   clickedElements: WeakSet<HTMLElement>,
 ): ExecutionResult {
-  const candidate = findBestCandidate(clickedElements);
+  const candidate = findBestCandidate(rules, clickedElements);
   if (!candidate) {
     return {
       matched: false,

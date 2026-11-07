@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium, expect, test } from "@playwright/test";
+import { fixtureRulesDocument } from "./rules-bridge";
 
 test("unpacked Manifest V3 extension reports without token setup using real Chrome APIs", async ({}, testInfo) => {
   const profile = await mkdtemp(join(tmpdir(), "cookie-cutter-extension-"));
@@ -12,6 +13,7 @@ test("unpacked Manifest V3 extension reports without token setup using real Chro
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
+      "--host-resolver-rules=MAP cookie-cutter.devtty.me ~NOTFOUND",
     ],
   });
   try {
@@ -19,6 +21,15 @@ test("unpacked Manifest V3 extension reports without token setup using real Chro
       context.serviceWorkers()[0] ??
       (await context.waitForEvent("serviceworker"));
     const extensionId = new URL(worker.url()).host;
+    await worker.evaluate(async (document) => {
+      // Exercise the real HTTP/cache/alarm adapters with a controlled source.
+      // DNS is blocked above so the test never contacts production.
+      globalThis.fetch = async (input) => {
+        if (String(input) !== "https://cookie-cutter.devtty.me/rules/v1.json")
+          throw new Error("Unexpected extension request");
+        return Response.json(document);
+      };
+    }, fixtureRulesDocument);
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expect(popup.getByRole("textbox")).toHaveCount(0);
@@ -74,6 +85,55 @@ test("unpacked Manifest V3 extension reports without token setup using real Chro
       )
       .toBe(2);
     expect(await stats()).toEqual({ page: 1, total: 2 });
+    expect(
+      await worker.evaluate(
+        async () =>
+          (await chrome.storage.local.get("matchingRules")).matchingRules,
+      ),
+    ).toMatchObject({ document: { revision: fixtureRulesDocument.revision } });
+    expect(
+      await worker.evaluate(
+        async () =>
+          (await chrome.alarms.get("refresh-matching-rules"))?.periodInMinutes,
+      ),
+    ).toBe(15);
+
+    await website.evaluate(() => {
+      const banner = document.createElement("section");
+      banner.className = "cookie-banner";
+      banner.innerHTML =
+        "<p>We use cookies.</p><button>Skip optional cookies</button>";
+      banner
+        .querySelector("button")!
+        .addEventListener("click", () => banner.remove());
+      document.body.append(banner);
+    });
+    await expect(website.locator(".cookie-banner")).toBeVisible();
+    await worker.evaluate(async (document) => {
+      const updated = {
+        revision: "b".repeat(64),
+        rules: {
+          ...document.rules,
+          labels: {
+            ...document.rules.labels,
+            reject: [...document.rules.labels.reject, "skip optional cookies"],
+          },
+        },
+      };
+      globalThis.fetch = async () => Response.json(updated);
+      await chrome.alarms.create("refresh-matching-rules", {
+        when: Date.now(),
+      });
+    }, fixtureRulesDocument);
+    await expect(website.locator(".cookie-banner")).toHaveCount(0);
+    await expect
+      .poll(() =>
+        worker.evaluate(
+          async () =>
+            (await chrome.storage.local.get("matchingRules")).matchingRules,
+        ),
+      )
+      .toMatchObject({ document: { revision: "b".repeat(64) } });
   } finally {
     await context.close();
     await rm(profile, { recursive: true, force: true });

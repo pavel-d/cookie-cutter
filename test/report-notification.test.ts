@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExtensionMessage, ReportStatus } from "../src/reporting/protocol";
 
 vi.mock("../src/reporting/stats-background", () => ({ registerStats() {} }));
+vi.mock("../src/rules/background", () => ({ registerRuleUpdates() {} }));
 
 const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1]);
 const message: ExtensionMessage = {

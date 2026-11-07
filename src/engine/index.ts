@@ -5,14 +5,14 @@ import { runMatchingRule } from "./rules";
 import { createDismissalState } from "../types";
 import { isVisible } from "./dom";
 import type {
-  CookieRule,
   DetectionContext,
   DismissalState,
   ExecutionResult,
 } from "../types";
+import type { MatcherRules } from "../rules/ruleset";
 
 export async function executeDismissal(
-  rules: CookieRule[],
+  rules: MatcherRules,
   state: DismissalState,
   signal?: AbortSignal,
 ): Promise<ExecutionResult> {
@@ -22,6 +22,7 @@ export async function executeDismissal(
 
   const siteResult = await runMatchingRule(
     rules,
+    rules.sites,
     context,
     state.ruleProgress,
     signal,
@@ -33,11 +34,11 @@ export async function executeDismissal(
   if (signal?.aborted) {
     return { matched: false, clicked: false, reason: "dismissal stopped" };
   }
-  return runGenericHeuristics(state.clickedElements);
+  return runGenericHeuristics(rules, state.clickedElements);
 }
 
 export function startCookieDismissal(
-  rules: CookieRule[],
+  rules: MatcherRules,
   onPopupClosed?: () => void,
 ): () => void {
   const state = createDismissalState();

@@ -26,6 +26,8 @@ npx playwright install chromium
 npm run check
 ```
 
-Checks cover formatting, TypeScript, extension and backend builds, unit tests, Chrome/Chromium integration tests, and Cloudflare runtime tests. GitHub Actions runs them on every push and pull request and uploads a tested extension ZIP. Store publishing and extension auto-updates are not configured.
+Edit [rules/matchers.json](rules/matchers.json) to update matching rules. Merging to `main` triggers Cloudflare compilation and deployment to `cookie-cutter.devtty.me/rules/v1.json`. Extensions check at browser startup and every 15 minutes, retain the last valid rules offline, and apply changes to open pages. Install version 0.4.0 once to enable this; later rule updates need no extension reload.
 
 The reporting backend runs at `cookie-cutter.devtty.me`.
+
+GitHub Actions tests every push and PR and provides an extension ZIP. Store publishing is not configured.

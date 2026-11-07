@@ -1,3 +1,4 @@
+import { matcherRules } from "./helpers";
 import {
   findBestCandidate,
   runGenericHeuristics,
@@ -22,7 +23,9 @@ describe("floating promotional offers", () => {
         .addEventListener("click", open);
       document.querySelector("button")!.addEventListener("click", close);
 
-      expect(runGenericHeuristics(new WeakSet()).clicked).toBe(true);
+      expect(runGenericHeuristics(matcherRules, new WeakSet()).clicked).toBe(
+        true,
+      );
       expect(close).toHaveBeenCalledOnce();
       expect(open).not.toHaveBeenCalled();
     },
@@ -31,13 +34,13 @@ describe("floating promotional offers", () => {
   it("preserves an ordinary inline offer", () => {
     document.body.innerHTML =
       '<section><span role="button">Get £50 off</span><button aria-label="Close teaser"></button></section>';
-    expect(findBestCandidate()).toBeNull();
+    expect(findBestCandidate(matcherRules)).toBeNull();
   });
 
   it("requires promotional context for a floating teaser close control", () => {
     document.body.innerHTML =
       '<aside style="position: fixed"><p>Help with your order</p><button aria-label="Close teaser"></button></aside>';
-    expect(findBestCandidate()).toBeNull();
+    expect(findBestCandidate(matcherRules)).toBeNull();
   });
 
   it("closes the captured subscription teaser despite hidden SMS consent text", () => {
@@ -50,10 +53,12 @@ describe("floating promotional offers", () => {
     document
       .querySelector(".email-subscription-popup__trigger-image-wrapper")!
       .addEventListener("click", open);
-    expect(findBestCandidate()?.popup).toBe(
+    expect(findBestCandidate(matcherRules)?.popup).toBe(
       document.querySelector("#email-subscription-popup"),
     );
-    expect(runGenericHeuristics(new WeakSet()).clicked).toBe(true);
+    expect(runGenericHeuristics(matcherRules, new WeakSet()).clicked).toBe(
+      true,
+    );
     expect(close).toHaveBeenCalledOnce();
     expect(open).not.toHaveBeenCalled();
   });
@@ -67,14 +72,16 @@ describe("floating promotional offers", () => {
     "ignores hidden consent text with %s in a promotional overlay",
     (style) => {
       document.body.innerHTML = `<aside style="position: fixed"><img alt="Newsletter subscription"><div style="${style}"><p>You consent to marketing messages.</p></div><button>Close</button></aside>`;
-      expect(findBestCandidate()?.reason).toBe("dismiss promotional popup");
+      expect(findBestCandidate(matcherRules)?.reason).toBe(
+        "dismiss promotional popup",
+      );
     },
   );
 
   it("preserves visible consent choices in a promotional overlay", () => {
     document.body.innerHTML =
       '<aside style="position: fixed"><img alt="Newsletter subscription"><p>You consent to marketing messages.</p><button>Close</button></aside>';
-    expect(findBestCandidate()).toBeNull();
+    expect(findBestCandidate(matcherRules)).toBeNull();
   });
 
   it.each([
@@ -93,16 +100,20 @@ describe("floating promotional offers", () => {
     document.body.innerHTML = `<aside style="position: fixed"><a href="/shop"><img alt="${imageLabel}" width="200" height="200"></a>${control}</aside>`;
     const open = vi.fn();
     document.querySelector("a")!.addEventListener("click", open);
-    const candidate = findBestCandidate();
+    const candidate = findBestCandidate(matcherRules);
     expect(candidate?.reason).toBe("dismiss promotional popup");
-    expect(runGenericHeuristics(new WeakSet()).clicked).toBe(true);
+    expect(runGenericHeuristics(matcherRules, new WeakSet()).clicked).toBe(
+      true,
+    );
     expect(open).not.toHaveBeenCalled();
   });
 
   it("uses promotional overlay metadata when artwork has no image label", () => {
     document.body.innerHTML =
       '<div class="seasonal-promotion" style="position: fixed"><img alt="" width="200" height="200"><span class="close-btn" style="cursor: pointer"></span></div>';
-    expect(findBestCandidate()?.reason).toBe("dismiss promotional popup");
+    expect(findBestCandidate(matcherRules)?.reason).toBe(
+      "dismiss promotional popup",
+    );
   });
 
   it.each(["fixed", "absolute"])(
@@ -119,7 +130,9 @@ describe("floating promotional offers", () => {
       document.querySelector(".close-btn")!.addEventListener("click", close);
       document.querySelector(".pop-picture")!.addEventListener("click", open);
 
-      expect(runGenericHeuristics(new WeakSet()).clicked).toBe(true);
+      expect(runGenericHeuristics(matcherRules, new WeakSet()).clicked).toBe(
+        true,
+      );
       expect(close).toHaveBeenCalledOnce();
       expect(open).not.toHaveBeenCalled();
     },
@@ -129,7 +142,7 @@ describe("floating promotional offers", () => {
     "recognizes unlabelled artwork in a renamed %s",
     (className) => {
       document.body.innerHTML = `<div class="${className}" style="position: fixed"><img class="artwork" alt="picture"><img class="exit-marker" alt="close"></div>`;
-      expect(findBestCandidate()?.element).toBe(
+      expect(findBestCandidate(matcherRules)?.element).toBe(
         document.querySelector(".exit-marker"),
       );
     },
@@ -147,7 +160,7 @@ describe("floating promotional offers", () => {
     '<div class="popup" style="position: fixed"><img alt="pop-picture"><img class="close-btn" alt="close" aria-disabled="true"></div>',
   ])("preserves non-promotional or unsafe artwork popups: %s", (html) => {
     document.body.innerHTML = html;
-    expect(findBestCandidate()).toBeNull();
+    expect(findBestCandidate(matcherRules)).toBeNull();
   });
 
   it.each([
@@ -168,6 +181,6 @@ describe("floating promotional offers", () => {
     '<aside class="image-lightbox" style="position: fixed"><img alt="Sale"><button>Close</button></aside>',
   ])("preserves unrelated or unsafe image UI: %s", (html) => {
     document.body.innerHTML = html;
-    expect(findBestCandidate()).toBeNull();
+    expect(findBestCandidate(matcherRules)).toBeNull();
   });
 });

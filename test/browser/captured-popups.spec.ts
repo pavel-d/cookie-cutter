@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { installRulesBridge } from "./rules-bridge";
+
+test.beforeEach(async ({ page }) => {
+  await installRulesBridge(page);
+});
 
 const bundlePath = resolve("dist/content.js");
 const captures = [

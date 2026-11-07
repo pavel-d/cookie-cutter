@@ -12,6 +12,7 @@ import {
 } from "../src/reporting/report";
 import { submitReport } from "./application/submit-report";
 import { LinearIssueTracker } from "./adapters/linear";
+import { rulesResponse } from "./adapters/rules-response";
 
 type Env = InferEnv<UnwrapConfig<typeof config>["worker"]>;
 
@@ -50,6 +51,8 @@ function boundedBody(request: Request): {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/rules/v1.json")
+      return rulesResponse(request);
     if (request.method === "GET" && url.pathname === "/health")
       return json({
         service: "cookie-cutter-reports",

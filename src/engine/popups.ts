@@ -1,4 +1,4 @@
-import { CONSENT_KEYWORDS } from "../rules/constants";
+import type { MatcherRules } from "../rules/ruleset";
 import {
   getComposedParent,
   getElementLabel,
@@ -8,32 +8,6 @@ import {
   normalizeText,
 } from "./dom";
 
-export const PREFERENCE_LABELS = [
-  "preferences",
-  "manage preferences",
-  "manage settings",
-  "cookie settings",
-  "cookie preferences",
-  "manage cookies",
-  "customize",
-  "customise",
-  "customize cookies",
-  "customise cookies",
-  "privacy settings",
-];
-
-const OFFER_CLOSE_LABELS = ["close teaser", "close offer", "close promotion"];
-
-export const CLOSE_LABELS = [
-  "close",
-  "close dialog",
-  ...OFFER_CLOSE_LABELS,
-  "dismiss",
-  "no thanks",
-  "not now",
-  "hide this message",
-];
-
 function getIdentity(element: Element): string {
   return normalizeText(
     `${element.id} ${element.getAttribute("class") ?? ""} ${element.getAttribute("aria-label") ?? ""}`
@@ -42,27 +16,30 @@ function getIdentity(element: Element): string {
   );
 }
 
-export function getCloseLabel(element: HTMLElement): string | null {
+export function getCloseLabel(
+  rules: MatcherRules,
+  element: HTMLElement,
+): string | null {
   const label = getElementLabel(element);
-  if (CLOSE_LABELS.includes(label)) {
+  if (rules.labels.close.includes(label)) {
     return label;
   }
   // An explicit accessible label takes precedence over implementation hints.
-  if (label && !["x", "×", "✕", "✖"].includes(label)) {
+  if (label && !rules.labels.icons.includes(label)) {
     return null;
   }
   const title = normalizeText(element.getAttribute("title"));
   const alt = normalizeText(element.getAttribute("alt"));
-  if (CLOSE_LABELS.includes(title)) {
+  if (rules.labels.close.includes(title)) {
     return title;
   }
-  if (CLOSE_LABELS.includes(alt)) {
+  if (rules.labels.close.includes(alt)) {
     return alt;
   }
   if (
     !title &&
     !alt &&
-    /\b(?:close|dismiss)\b/.test(getIdentity(element)) &&
+    rules.patterns.closeIdentity.test(getIdentity(element)) &&
     window.getComputedStyle(element).cursor === "pointer"
   ) {
     return "close";
@@ -70,17 +47,16 @@ export function getCloseLabel(element: HTMLElement): string | null {
   return null;
 }
 
-export function findVisibleCloseTargets(root: ParentNode): HTMLElement[] {
-  return Array.from(
-    root.querySelectorAll(
-      "button, a, input[type='button'], input[type='submit'], [role='button'], [class], [id], [title], img[alt]",
-    ),
-  ).filter(
+export function findVisibleCloseTargets(
+  rules: MatcherRules,
+  root: ParentNode,
+): HTMLElement[] {
+  return Array.from(root.querySelectorAll(rules.selectors.closeTargets)).filter(
     (element): element is HTMLElement =>
       element instanceof HTMLElement &&
-      getCloseLabel(element) !== null &&
+      getCloseLabel(rules, element) !== null &&
       ((element instanceof HTMLImageElement &&
-        CLOSE_LABELS.includes(normalizeText(element.alt))) ||
+        rules.labels.close.includes(normalizeText(element.alt))) ||
         isClickable(element) ||
         window.getComputedStyle(element).cursor === "pointer") &&
       isVisible(element) &&
@@ -89,35 +65,34 @@ export function findVisibleCloseTargets(root: ParentNode): HTMLElement[] {
 }
 
 function isPromotionalMediaOverlay(
+  rules: MatcherRules,
   container: HTMLElement,
   closeControl: HTMLElement,
 ): boolean {
   const identity = getIdentity(container);
-  const overlay = isOverlay(container);
+  const overlay = isOverlay(rules, container);
   const positionedPopup =
-    /\b(?:popup|pop up|poplayer|pop layer|modal|teaser)\b/.test(identity) &&
+    rules.patterns.popupIdentity.test(identity) &&
     (overlay || window.getComputedStyle(container).position === "absolute");
   if (!overlay && !positionedPopup) {
     return false;
   }
   const headings = Array.from(
-    container.querySelectorAll("h1, h2, h3, [role='heading']"),
+    container.querySelectorAll(rules.selectors.headings),
   )
     .filter((element) => element instanceof HTMLElement && isVisible(element))
     .map((element) => normalizeText(element.textContent))
     .join(" ");
   if (
-    /\b(?:cart|basket|checkout|account|login|sign in|chat|support|help|search|gallery|lightbox|zoom|viewer|carousel)\b/.test(
-      `${identity} ${headings}`,
-    ) ||
-    Array.from(container.querySelectorAll("input, select, textarea")).some(
+    rules.patterns.excludedContext.test(`${identity} ${headings}`) ||
+    Array.from(container.querySelectorAll(rules.selectors.formControls)).some(
       (element) => element instanceof HTMLElement && isVisible(element),
     )
   ) {
     return false;
   }
   const images = Array.from(
-    container.querySelectorAll("img, [role='img']"),
+    container.querySelectorAll(rules.selectors.media),
   ).filter(
     (element): element is HTMLElement =>
       element instanceof HTMLElement &&
@@ -136,7 +111,7 @@ function isPromotionalMediaOverlay(
   const text = normalizeText(container.innerText ?? container.textContent);
   if (
     overlay &&
-    /\b(?:newsletter|subscription|subscribe|promotions?|promotional|promo|coupons?|discounts?|sale|offers?|rewards?|bestsellers?|best sellers)\b/.test(
+    rules.patterns.promotionalMedia.test(
       `${identity} ${text} ${normalizeText(imageLabels)}`,
     )
   ) {
@@ -161,16 +136,16 @@ function isPromotionalMediaOverlay(
   );
 }
 
-function isOverlay(element: HTMLElement): boolean {
+function isOverlay(rules: MatcherRules, element: HTMLElement): boolean {
   const style = window.getComputedStyle(element);
   return (
-    element.matches("dialog, [role='dialog'], [aria-modal='true']") ||
+    element.matches(rules.selectors.overlay) ||
     style.position === "fixed" ||
     style.position === "sticky"
   );
 }
 
-function hasConsentText(element: HTMLElement): boolean {
+function hasConsentText(rules: MatcherRules, element: HTMLElement): boolean {
   // Hidden signup panels can contain marketing consent inside a visible teaser.
   // Only rendered text should classify that teaser as a cookie/consent region.
   const walker = element.ownerDocument.createTreeWalker(
@@ -189,10 +164,13 @@ function hasConsentText(element: HTMLElement): boolean {
     }
   }
   const text = normalizeText(visibleText.join(" "));
-  return CONSENT_KEYWORDS.some((keyword) => text.includes(keyword));
+  return rules.labels.consent.some((keyword) => text.includes(keyword));
 }
 
-export function findConsentContainer(element: HTMLElement): HTMLElement | null {
+export function findConsentContainer(
+  rules: MatcherRules,
+  element: HTMLElement,
+): HTMLElement | null {
   for (
     let parent = getComposedParent(element);
     parent && parent !== document.body;
@@ -200,57 +178,59 @@ export function findConsentContainer(element: HTMLElement): HTMLElement | null {
   ) {
     const identity = `${parent.id} ${parent.className} ${parent.getAttribute("aria-label") ?? ""}`;
     const isCookieRegion =
-      /cookie|consent/i.test(identity) &&
-      (parent.matches("[role='region'], [role='alert']") ||
-        /banner|notice|consent/i.test(identity));
-    if ((isOverlay(parent) || isCookieRegion) && hasConsentText(parent)) {
+      rules.patterns.consentIdentity.test(identity) &&
+      (parent.matches(rules.selectors.consentRegion) ||
+        rules.patterns.consentRegion.test(identity));
+    if (
+      (isOverlay(rules, parent) || isCookieRegion) &&
+      hasConsentText(rules, parent)
+    ) {
       return parent;
     }
   }
   return null;
 }
 
-export function canCloseConsentNotice(container: HTMLElement): boolean {
+export function canCloseConsentNotice(
+  rules: MatcherRules,
+  container: HTMLElement,
+): boolean {
   const text = normalizeText(container.textContent);
   return (
-    /you(?: have|'ve) (?:rejected|accepted)\b.*cookies/.test(text) ||
-    /(?:we (?:only use|use only) (?:strictly )?(?:necessary|essential) cookies)/.test(
-      text,
-    ) ||
-    (/strictly necessary cookies/.test(text) &&
-      /will not use any other cookies/.test(text))
+    rules.patterns.confirmedChoice.test(text) ||
+    rules.patterns.necessaryOnly.test(text) ||
+    (rules.patterns.strictlyNecessary.test(text) &&
+      rules.patterns.noOtherCookies.test(text))
   );
 }
 
 export function findPromotionalContainer(
+  rules: MatcherRules,
   element: HTMLElement,
 ): HTMLElement | null {
-  const offerClose = OFFER_CLOSE_LABELS.includes(getCloseLabel(element) ?? "");
+  const offerClose = rules.labels.offerClose.includes(
+    getCloseLabel(rules, element) ?? "",
+  );
   for (
     let parent = getComposedParent(element);
     parent && parent !== document.body;
     parent = getComposedParent(parent)
   ) {
-    if (isPromotionalMediaOverlay(parent, element)) {
+    if (isPromotionalMediaOverlay(rules, parent, element)) {
       return parent;
     }
-    if (!isOverlay(parent)) {
+    if (!isOverlay(rules, parent)) {
       continue;
     }
     const text = normalizeText(parent.textContent);
-    const signup =
-      /\b(?:subscribe|newsletter|mailing list|sign up|signing up)\b/.test(text);
+    const signup = rules.patterns.signup.test(text);
     const incentive =
-      /\b(?:rewards?|welcome gift|discount|first order|exclusive offers?)\b/.test(
-        text,
-      ) || /(?:[£$€]\s*\d+(?:[.,]\d+)*|\d+(?:[.,]\d+)*\s*%)\s*off/.test(text);
-    const email = Boolean(
-      parent.querySelector("input[type='email'], input[autocomplete='email']"),
-    );
+      rules.patterns.incentive.test(text) || rules.patterns.discount.test(text);
+    const email = Boolean(parent.querySelector(rules.selectors.email));
     if (
       (signup && (incentive || email)) ||
       (offerClose && incentive) ||
-      /\b(?:redeem|claim) (?:your )?rewards?\b/.test(text)
+      rules.patterns.rewards.test(text)
     ) {
       return parent;
     }
