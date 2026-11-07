@@ -5,6 +5,7 @@ import type { ExtensionMessage } from "./protocol";
 (() => {
   const marker = "cookie-cutter-picker";
   if (document.getElementById(marker)) return;
+  document.getElementById("cookie-cutter-report-notification")?.remove();
   const host = document.createElement("div");
   host.id = marker;
   const shadow = host.attachShadow({ mode: "closed" });

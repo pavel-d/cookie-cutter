@@ -2,12 +2,38 @@ import { validateReport, type Report, type ReportReceipt } from "./report";
 import { REPORT_ENDPOINT, REPORT_TOKEN } from "./http";
 import type { ExtensionMessage, PageCapture, ReportStatus } from "./protocol";
 import { registerStats } from "./stats-background";
+import {
+  showReportNotification,
+  type ReportNotification,
+} from "./notification";
 
 registerStats();
 
 const ready = chrome.storage.session.setAccessLevel({
   accessLevel: "TRUSTED_CONTEXTS",
 });
+
+interface ReportDocument {
+  tabId: number;
+  documentId: string;
+}
+
+async function notifyPage(
+  target: ReportDocument,
+  notification: ReportNotification,
+): Promise<void> {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: target.tabId, documentIds: [target.documentId] },
+      func: showReportNotification,
+      args: [notification],
+    });
+  } catch (error) {
+    // Navigation can remove the captured document. Keep the report result and
+    // action badge intact even when its original page can no longer show it.
+    console.warn("[cookie-cutter] Could not show report notification", error);
+  }
+}
 
 async function setStatus(status: ReportStatus): Promise<void> {
   await chrome.storage.session.set({ reportStatus: status });
@@ -48,6 +74,7 @@ async function beginReport(): Promise<ReportStatus> {
 async function submit(
   capture: PageCapture,
   tab: chrome.tabs.Tab,
+  target: ReportDocument,
 ): Promise<ReportReceipt> {
   const current = await chrome.tabs.get(tab.id!);
   const window = await chrome.windows.get(tab.windowId);
@@ -81,6 +108,8 @@ async function submit(
     screenshot,
   };
   validateReport(report);
+  // Both captures are finished before any notification is inserted on the page.
+  await notifyPage(target, { phase: "sending" });
   const body = new FormData();
   body.set("metadata", JSON.stringify(metadata));
   body.set(
@@ -151,10 +180,19 @@ async function handle(
     await setStatus({ phase: "idle" });
   } else if (message.type === "selection-error") {
     await setStatus({ phase: "error", message: message.message });
+    if (sender.documentId)
+      await notifyPage(
+        { tabId: sender.tab!.id!, documentId: sender.documentId },
+        { phase: "error", message: message.message },
+      );
   } else if (message.type === "selection-captured") {
+    if (!sender.documentId)
+      throw new Error("This page changed. Please start another report.");
+    const target = { tabId: sender.tab!.id!, documentId: sender.documentId };
     await setStatus({ phase: "sending" });
-    const receipt = await submit(message.capture, sender.tab!);
+    const receipt = await submit(message.capture, sender.tab!, target);
     await setStatus({ phase: "sent", receipt });
+    await notifyPage(target, { phase: "sent", identifier: receipt.identifier });
   }
   const updated = await chrome.storage.session.get("reportStatus");
   return updated.reportStatus as ReportStatus;
@@ -182,6 +220,15 @@ chrome.runtime.onMessage.addListener(
               : "The report timed out. Please try again.",
         };
         await setStatus(status);
+        if (
+          message.type !== "begin-report" &&
+          sender.tab?.id !== undefined &&
+          sender.documentId
+        )
+          await notifyPage(
+            { tabId: sender.tab.id, documentId: sender.documentId },
+            { phase: "error", message: status.message },
+          );
         respond(status);
       });
     return true;

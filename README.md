@@ -61,7 +61,9 @@ On an affected website:
 
 1. Click the extension icon and **Report a popup**.
 2. Click the element you want removed. Press Escape to cancel instead.
-3. Reopen the extension menu to see submission progress or the resulting issue ID.
+3. Watch the on-page notification for submission progress and the resulting issue ID. Successful confirmations disappear after ten seconds; errors remain until dismissed. You can also reopen the extension menu to see the result.
+
+Notifications are added after HTML and screenshot capture, and stay attached to the original document. They use Chrome's Popover API (Chrome 114+) to appear above page overlays. Navigating away cannot inject a notification into the new page. The action badge and menu retain the result if the original document is gone.
 
 The picker suppresses the selected click and removes itself before capturing. A report includes the full top-level DOM as HTML, open shadow roots as declarative templates, a visible-viewport PNG, selector path and selected markup preview (up to 16,000 characters), page URL/title, extension version and capture time. Each selector after the first is queried within the previous host's open shadow root. Frame documents, closed shadow roots, event listeners and application JavaScript state are unavailable. The screenshot is not a full-page scrolling capture. HTML is limited to 8 MiB and PNG to 4 MiB; oversized reports fail explicitly rather than silently truncating the page.
 

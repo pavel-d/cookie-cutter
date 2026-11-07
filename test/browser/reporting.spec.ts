@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { showReportNotification } from "../../src/reporting/notification";
 
 test.beforeEach(async ({ page }) => {
   await page.route("**/*", (route) => route.abort());
@@ -35,7 +36,14 @@ test("picker captures the clicked shadow element, preserves full HTML, and remov
       },
     });
   });
+  await page.evaluate(showReportNotification, {
+    phase: "sent" as const,
+    identifier: "PREVIOUS-1",
+  });
   await page.addScriptTag({ path: resolve("dist/picker.js") });
+  await expect(page.locator("#cookie-cutter-report-notification")).toHaveCount(
+    0,
+  );
   await expect(page.locator("#cookie-cutter-picker")).toHaveCount(1);
   await page.getByRole("button", { name: "Claim reward" }).click();
   await expect(page.locator("#cookie-cutter-picker")).toHaveCount(0);
@@ -66,6 +74,9 @@ test("picker captures the clicked shadow element, preserves full HTML, and remov
   expect(message.capture.html).toContain("Page content");
   expect(message.capture.html).toContain('<template shadowrootmode="open">');
   expect(message.capture.html).not.toContain('id="cookie-cutter-picker"');
+  expect(message.capture.html).not.toContain(
+    'id="cookie-cutter-report-notification"',
+  );
   expect(message.capture.selection.selectorPath).toEqual([
     "#offer-host",
     "#reward\\:button",
@@ -115,6 +126,88 @@ test("Escape cancels without collecting page HTML", async ({ page }) => {
       () => (window as unknown as { reportMessages: unknown[] }).reportMessages,
     ),
   ).toEqual([{ type: "selection-cancelled" }]);
+});
+
+test("on-page feedback shows progress, plain confirmation, and persistent dismissible errors", async ({
+  page,
+}, testInfo) => {
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  await page.setContent("<main><button>Page action</button></main>");
+  await page.evaluate(showReportNotification, { phase: "sending" as const });
+  await expect(page.getByRole("status")).toHaveText("Sending report…");
+  await page.evaluate(showReportNotification, {
+    phase: "sent" as const,
+    identifier: "TEST-1",
+  });
+  await expect(page.getByRole("status")).toHaveText("Report sent · TEST-1");
+  await expect(page.getByRole("link")).toHaveCount(0);
+  await expect(page.locator("#cookie-cutter-report-notification")).toHaveCount(
+    1,
+  );
+  await page.screenshot({ path: testInfo.outputPath("report-sent.png") });
+  await page.clock.runFor(9999);
+  await expect(page.getByRole("status")).toBeVisible();
+  await page.clock.runFor(1);
+  await expect(page.locator("#cookie-cutter-report-notification")).toHaveCount(
+    0,
+  );
+  await page.evaluate(showReportNotification, {
+    phase: "error" as const,
+    message: "Could not send the report. Please try again.",
+  });
+  await page.clock.runFor(60000);
+  await expect(page.getByRole("alert")).toHaveText(
+    "Could not send the report. Please try again.",
+  );
+  await page.getByRole("button", { name: "Dismiss notification" }).click();
+  await expect(page.locator("#cookie-cutter-report-notification")).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("button", { name: "Page action" })).toBeVisible();
+});
+
+test("on-page feedback stays visible with restrictive page styles and CSP", async ({
+  page,
+}) => {
+  await page.setContent(
+    `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'none'"><main>Strict page</main>`,
+  );
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.evaluate(showReportNotification, {
+    phase: "sent" as const,
+    identifier: "TEST-2",
+  });
+  await expect(page.getByRole("status")).toHaveText("Report sent · TEST-2");
+  const card = page.locator("#cookie-cutter-report-notification section");
+  await expect(card).toBeVisible();
+  await expect(page.locator("#cookie-cutter-report-notification")).toHaveCSS(
+    "position",
+    "fixed",
+  );
+  await expect(card).toHaveCSS("background-color", "rgb(18, 18, 18)");
+});
+
+test("on-page feedback stays interactive above a native modal", async ({
+  page,
+}) => {
+  await page.setContent("<dialog><button>Modal action</button></dialog>");
+  await page
+    .locator("dialog")
+    .evaluate((dialog: HTMLDialogElement) => dialog.showModal());
+  await page.evaluate(showReportNotification, {
+    phase: "sent" as const,
+    identifier: "TEST-3",
+  });
+  await expect(page.getByRole("status")).toHaveText("Report sent · TEST-3");
+  await expect(
+    page.locator("#cookie-cutter-report-notification:popover-open"),
+  ).toHaveCount(1);
+  await page.getByRole("button", { name: "Dismiss notification" }).click();
+  await expect(page.locator("#cookie-cutter-report-notification")).toHaveCount(
+    0,
+  );
+  await expect(page.locator("dialog")).toHaveAttribute("open", "");
 });
 
 test("extension menu confirms the report ID without a Linear link", async ({
