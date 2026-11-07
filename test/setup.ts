@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 
 beforeEach(() => {
+  if (typeof HTMLElement === "undefined") return;
   // jsdom has no layout engine. Supply geometry explicitly; CSS visibility is
   // still checked by the production code and geometry edge cases override this.
   vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([
@@ -9,8 +10,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  document.body.replaceChildren();
-  window.history.replaceState({}, "", "/");
+  if (typeof document !== "undefined") {
+    document.body.replaceChildren();
+    window.history.replaceState({}, "", "/");
+  }
   vi.restoreAllMocks();
   vi.useRealTimers();
 });

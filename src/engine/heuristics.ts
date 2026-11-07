@@ -8,9 +8,10 @@ import {
 } from "./dom";
 import {
   canCloseConsentNotice,
-  CLOSE_LABELS,
   findConsentContainer,
   findPromotionalContainer,
+  findVisibleCloseTargets,
+  getCloseLabel,
   PREFERENCE_LABELS,
 } from "./popups";
 import type { ClickCandidate, ExecutionResult } from "../types";
@@ -40,21 +41,30 @@ export function findBestCandidate(
 ): ClickCandidate | null {
   let best: ClickCandidate | null = null;
 
-  const labels = [...REJECT_LABELS, ...PREFERENCE_LABELS, ...CLOSE_LABELS];
-  for (const element of getDetectionRoots().flatMap((root) =>
-    findVisibleClickableTargets(root, labels),
-  )) {
+  const labels = [...REJECT_LABELS, ...PREFERENCE_LABELS];
+  const targets = new Set(
+    getDetectionRoots().flatMap((root) => [
+      ...findVisibleClickableTargets(root, labels),
+      ...findVisibleCloseTargets(root),
+    ]),
+  );
+  for (const element of targets) {
     if (clickedElements.has(element)) {
       continue;
     }
-    const label = getElementLabel(element);
+    const closeLabel = getCloseLabel(element);
+    const label = closeLabel ?? getElementLabel(element);
     const container = findConsentContainer(element);
+    const promotion =
+      !container && closeLabel !== null
+        ? findPromotionalContainer(element)
+        : null;
     let candidate: ClickCandidate | null = null;
     if (container) {
       candidate = scoreCandidate(element, normalizeText(container.textContent));
       if (
         !candidate &&
-        CLOSE_LABELS.includes(label) &&
+        closeLabel !== null &&
         canCloseConsentNotice(container)
       ) {
         candidate = {
@@ -73,18 +83,16 @@ export function findBestCandidate(
         };
       }
     }
-    if (
-      !candidate &&
-      !container &&
-      CLOSE_LABELS.includes(label) &&
-      findPromotionalContainer(element)
-    ) {
+    if (!candidate && !container && closeLabel !== null && promotion) {
       candidate = {
         element,
         label,
         score: DEFAULT_THRESHOLD - 3,
         reason: "dismiss promotional popup",
       };
+    }
+    if (candidate && candidate.reason !== "open cookie preferences") {
+      candidate.popup = container ?? promotion ?? undefined;
     }
     if (candidate && (!best || candidate.score > best.score)) {
       best = candidate;
@@ -113,5 +121,6 @@ export function runGenericHeuristics(
     clicked: true,
     reason: "generic candidate clicked",
     label: candidate.label,
+    popup: candidate.popup,
   };
 }

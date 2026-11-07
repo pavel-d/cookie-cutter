@@ -9,6 +9,24 @@ const captures = [
   { name: "dusk", clicks: ["preferences", "deny all"] },
   { name: "daals", clicks: ["manage settings", "deny all"] },
   { name: "ecoflow", clicks: ["reject all"] },
+  {
+    name: "ecoflow-teaser",
+    clicks: ["close"],
+    closeSelector: ".email-subscription-popup__trigger-close",
+    openSelector: ".email-subscription-popup__trigger-image-wrapper",
+  },
+  {
+    name: "aliexpress-bestseller",
+    clicks: ["close"],
+    closeSelector: "img[alt='close']",
+    openSelector: "img:not([alt='close'])",
+    // Layout is modelled: the user supplied outerHTML without the site's CSS.
+    styles: `
+      #fixture > div { position: fixed; top: 50px; left: 50px; }
+      #fixture img:first-child { width: 200px; height: 200px; }
+      #fixture img:last-child { display: block; width: 32px; height: 32px; }
+    `,
+  },
   { name: "castlery", clicks: ["close dialog"] },
   { name: "castlery-teaser", clicks: ["close teaser"] },
 ];
@@ -24,7 +42,7 @@ function readCapture(name: string): string {
 // while removing vendor identities. Production detection must not use a brand.
 function rebrand(html: string): string {
   return html.replace(
-    /govuk|nhsuk|nhs|pandectes|daals|ecoflow|castlery|klaviyo/gi,
+    /govuk|nhsuk|nhs|pandectes|daals|ecoflow|castlery|klaviyo|aliexpress|drogue|pop-picture|close-btn/gi,
     "otherbrand",
   );
 }
@@ -46,8 +64,11 @@ for (const capture of captures) {
       await page.setContent(
         '<main><h1>Unrelated page content</h1><button id="unrelated">Continue</button></main><div id="fixture"></div>',
       );
+      if (capture.styles) {
+        await page.addStyleTag({ content: capture.styles });
+      }
       await page.evaluate(
-        ({ html, preferences, name }) => {
+        ({ html, preferences, name, closeSelector, openSelector }) => {
           const fixture = document.querySelector<HTMLElement>("#fixture")!;
           fixture.dataset.clicks = "[]";
 
@@ -69,12 +90,25 @@ for (const capture of captures) {
             root.addEventListener("click", (event) => {
               const target = event.target;
               if (!(target instanceof Element)) return;
-              const control = target.closest(
-                "button, a, input[type='button'], input[type='submit'], [role='button']",
-              );
+              const iconClose = closeSelector
+                ? target.closest(closeSelector)
+                : null;
+              const artwork = openSelector
+                ? target.closest(openSelector)
+                : null;
+              const control =
+                iconClose ??
+                artwork ??
+                target.closest(
+                  "button, a, input[type='button'], input[type='submit'], [role='button']",
+                );
               if (!control) return;
               const label = (
-                control.getAttribute("aria-label") ??
+                (iconClose
+                  ? "close"
+                  : artwork
+                    ? "open artwork"
+                    : control.getAttribute("aria-label")) ??
                 control.textContent ??
                 ""
               )
@@ -115,13 +149,21 @@ for (const capture of captures) {
           }
           mount(html);
         },
-        { html, preferences, name: capture.name },
+        {
+          html,
+          preferences,
+          name: capture.name,
+          closeSelector: capture.closeSelector,
+          openSelector: capture.openSelector,
+        },
       );
 
       await expect(
-        page.getByRole("button", {
-          name: new RegExp(`^${capture.clicks[0]}$`, "i"),
-        }),
+        capture.closeSelector
+          ? page.locator(capture.closeSelector)
+          : page.getByRole("button", {
+              name: new RegExp(`^${capture.clicks[0]}$`, "i"),
+            }),
       ).toBeVisible();
       if (variant === "captured") {
         await page.screenshot({
@@ -163,6 +205,10 @@ test("preserves unrelated dialogs, footer signup, and ambiguous cookie choices",
     <div role="dialog"><p>We use cookies. Subscribe to our newsletter for rewards.</p><input type="email"><button>Close</button></div>
     <article><p>Read our cookie policy.</p><button>Reject all</button></article>
     <section><p>Get £50 off</p><button>Close teaser</button></section>
+    <div role="dialog"><h2>Your shopping cart</h2><img alt="Sale" width="100" height="100"><button>Close</button></div>
+    <div role="dialog" class="image-lightbox"><img alt="Sale" width="100" height="100"><span class="close-icon" style="cursor: pointer">×</span></div>
+    <aside style="position: fixed"><img alt="Sale" hidden><button>Close</button></aside>
+    <aside style="position: fixed"><img alt="Sale" width="100" height="100"><div class="caption">Close</div></aside>
   `);
   await page.evaluate(() => {
     document.body.dataset.clicks = "0";
@@ -175,8 +221,45 @@ test("preserves unrelated dialogs, footer signup, and ambiguous cookie choices",
   await page.addScriptTag({ path: bundlePath });
   await page.clock.runFor(16000);
   await expect(page.locator("body")).toHaveAttribute("data-clicks", "0");
-  await expect(page.locator("[role='dialog']")).toHaveCount(3);
+  await expect(page.locator("[role='dialog']")).toHaveCount(5);
 });
+
+// Synthetic scenarios: these model sale and bestseller artwork, but are not
+// captures of AliExpress, whose live markup could not be inspected.
+for (const imageLabel of ["Sale: Shop now", "BESTSELLERS"]) {
+  test(`dismisses an image-based ${imageLabel} overlay without opening it`, async ({
+    page,
+  }) => {
+    await page.route("**/*", (route) => route.abort());
+    await page.clock.install();
+    await page.setContent(`
+      <main><button id="unrelated">Continue</button></main>
+      <aside style="position: fixed; top: 50px; left: 50px; cursor: pointer">
+        <a href="/shop"><img alt="${imageLabel}" width="200" height="200"></a>
+        <div class="popup-close" style="width: 24px; height: 24px">×</div>
+      </aside>
+    `);
+    await page.evaluate(() => {
+      document.body.dataset.clicks = "[]";
+      document.addEventListener("click", (event) => {
+        const target = event.target as Element;
+        const close = target.closest(".popup-close");
+        const clicks = JSON.parse(document.body.dataset.clicks!) as string[];
+        clicks.push(close ? "close" : "other");
+        document.body.dataset.clicks = JSON.stringify(clicks);
+        if (close) close.closest("aside")!.remove();
+      });
+    });
+    await page.addScriptTag({ path: bundlePath });
+    await page.clock.runFor(16000);
+    await expect(page.locator("aside")).toHaveCount(0);
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-clicks",
+      '["close"]',
+    );
+    await expect(page.locator("#unrelated")).toBeVisible();
+  });
+}
 
 test("discovers a newly attached nested shadow popup and respects hidden or inert hosts", async ({
   page,

@@ -6,3 +6,8 @@ artifacts/
 test-results/
 playwright-report/
 .DS_Store
+.cloudflare/
+.wrangler/
+.dev.vars*
+.env*
+cookie-cutter-extension.zip

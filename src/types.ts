@@ -45,6 +45,7 @@ export type ClickCandidate = {
   label: string;
   score: number;
   reason: string;
+  popup?: HTMLElement;
 };
 
 export type ExecutionResult =
@@ -55,4 +56,5 @@ export type ExecutionResult =
       reason: string;
       ruleId?: string;
       label?: string;
+      popup?: HTMLElement;
     };

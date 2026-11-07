@@ -1,25 +1,35 @@
 {
   "name": "cookie-cutter",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "backend"
+  ],
   "engines": {
-    "node": "^22.0.0 || >=24.0.0"
+    "node": "^22.18.0 || >=24.0.0"
   },
   "scripts": {
-    "dev": "vite build --watch",
-    "build": "vite build",
-    "check": "npm run format:check && npm run typecheck && npm run build && vitest run && playwright test",
+    "dev": "node --experimental-strip-types scripts/build.ts --watch",
+    "build": "node --experimental-strip-types scripts/build.ts",
+    "check": "npm run format:check && npm run typecheck && npm run build && npm run backend:test && vitest run && playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && vitest run",
     "test:browser": "npm run build && playwright test",
-    "test:fixtures": "vitest run test/fixture-rules.test.ts"
+    "test:fixtures": "vitest run test/fixture-rules.test.ts",
+    "backend:build": "cd backend && cf build",
+    "backend:test": "npm run backend:build && node --experimental-strip-types backend/test-runtime.ts",
+    "backend:dev": "cd backend && cf dev",
+    "backend:deploy": "cd backend && cf deploy"
   },
   "devDependencies": {
+    "@linear/sdk": "^101.1.0",
     "@playwright/test": "^1.65.0",
+    "@types/chrome": "^0.3.7",
     "@types/node": "^22.20.5",
+    "cf": "^0.15.0",
     "jsdom": "^26.0.0",
     "prettier": "^3.9.10",
     "typescript": "^5.7.3",

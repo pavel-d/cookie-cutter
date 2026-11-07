@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
+  forbidOnly: Boolean(process.env.CI),
   testDir: "./test/browser",
   workers: 1,
   reporter: "list",

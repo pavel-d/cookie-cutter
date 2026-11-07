@@ -6,7 +6,7 @@ It uses conservative English-label heuristics and supports bundled site-specific
 
 ## Local workflow
 
-Requires Node.js 22 or 24 and newer (Node.js 23 is unsupported by Vitest).
+Requires Node.js 22.18 or newer on the 22.x release line, or Node.js 24 and newer (Node.js 23 is unsupported by Vitest).
 
 1. Install dependencies with `npm ci`.
 2. Build the unpacked extension with `npm run build`.
@@ -15,12 +15,16 @@ Requires Node.js 22 or 24 and newer (Node.js 23 is unsupported by Vitest).
 5. Load the `dist/` directory as an unpacked extension.
 6. Rebuild after changes with `npm run dev` or rerun `npm run build`, then reload the extension and the target page.
 
-Run `npm run check` before handing over a change. It checks Prettier formatting, TypeScript, unit tests, the production build, and integration tests in installed Google Chrome. Use `npm run format` to apply formatting. `npm test` runs the unit suite; `npm run test:browser` builds the production bundle and runs the Chrome suite.
+Run `npx playwright install chromium` once for the unpacked-extension test. The other browser tests use installed Google Chrome.
+
+Run `npm run check` before handing over a change. It checks Prettier formatting, TypeScript, both production builds, unit tests, Chrome fixture tests, and an unpacked Manifest V3 extension test in Chromium. Use `npm run format` to apply formatting. `npm test` runs the unit suite; `npm run test:browser` builds the extension and runs the browser suite.
 
 ## Project layout
 
 - `src/content.ts`: bootstraps cookie dismissal on every page.
 - `src/engine/`: generic heuristics, site-rule execution, DOM helpers.
+- `src/reporting/`: extension menu, element picker, capture and reporting protocol.
+- `backend/`: Cloudflare Worker, report submission use case, and Linear adapter.
 - `src/rules/sites/`: repo-managed site-specific rules.
 - `test/fixtures/`: HTML snapshots used by unit tests.
 - `test/fixtures/captured/`: sanitized popup markup captured from a running browser, including shadow-root content and computed visibility.
@@ -39,13 +43,53 @@ The heuristic engine:
 - opens explicitly labelled cookie preferences and looks for an explicit reject/deny action on subsequent scans
 - dismisses cookie-choice confirmations (including "Hide this message") and necessary-only notices
 - closes promotional signup/rewards overlays using labelled close controls; it never subscribes or redeems an offer
+- recognizes image-based promotional overlays and floating subscription teasers using visible image labels or promotional metadata, plus semantic close icons (class/ID, title or image label); class/ID hints require a pointer cursor
+- closes image-only popup/modal widgets containing one artwork and an explicit close control, even when the artwork has a generic label; these need overlay semantics or absolute positioning and exclude other visible content or controls
 - scans every 600 ms for 15 seconds and runs one scan at a time
 
 Polling discovers shadow roots attached to existing hosts without a document mutation, as well as delayed UI changes. It stops at the deadline or when leaving the page. Work is bounded by the 15-second window; generic actions use labels, cookie context, overlay semantics and layout rather than site/domain allowlists or vendor IDs.
 
 Site rules retain their completed steps between scans. `maxWaitMs` is a timeout for finding the current step's visible, enabled target, not a delay after clicking. Without it, a missing target is retried on a subsequent scan. The registry is optional and currently empty; all captured-site support uses generic heuristics.
 
-The extension ships one self-contained content script. It has no background worker, network requests, telemetry, stored settings, or extension API permissions. The content-script match patterns still grant access to page content on HTTP and HTTPS sites, which Chrome can warn about when installing. See [Chrome's content-script documentation](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts).
+The content script is self-contained and dismisses popups locally. Reporting uses a Manifest V3 service worker and the `activeTab`, `scripting` and `storage` permissions. Backend access is restricted to `https://cookie-cutter.devtty.me/*`. The content-script match patterns grant access to page content on HTTP and HTTPS sites, which Chrome can warn about when installing. See [Chrome's content-script documentation](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts).
+
+## Report a popup
+
+The extension menu shows confirmed popups closed on the current page and an all-time total. A popup is counted only after a dismissal action and observing its container hidden or detached; opening preferences and ineffective clicks do not count. A container is counted at most once per document, including multi-step confirmation flows. The page count resets on navigation or reload. Totals are kept locally in this browser and start with the version that introduced statistics; they are not sent to the reporting backend.
+
+On an affected website:
+
+1. Click the extension icon and **Report a popup**.
+2. Click the element you want removed. Press Escape to cancel instead.
+3. Reopen the extension menu to see submission progress or the resulting Linear issue link.
+
+The picker suppresses the selected click and removes itself before capturing. A report includes the full top-level DOM as HTML, open shadow roots as declarative templates, a visible-viewport PNG, selector path and selected markup preview (up to 16,000 characters), page URL/title, extension version and capture time. Each selector after the first is queried within the previous host's open shadow root. Frame documents, closed shadow roots, event listeners and application JavaScript state are unavailable. The screenshot is not a full-page scrolling capture. HTML is limited to 8 MiB and PNG to 4 MiB; oversized reports fail explicitly rather than silently truncating the page.
+
+Reporting is initiated by the user; the engine does not automatically upload browsing data. HTML can contain personal information. A shared submission token is bundled in the extension and Worker, so reporting requires no setup. This deliberately public token filters blind submissions; it is not user authentication. A Cloudflare rate limiter allows five submissions per minute per IP address within a Cloudflare location. The Linear key exists only in the Worker. The Worker validates bounded multipart input, uploads HTML and PNG to Linear's private storage, and creates an issue in the **Cookie Cutter** project with the **automated-report** label, **Triage** state and an **[Automated report]** title prefix. Repeated requests with the same report UUID return the existing issue. Starting another capture creates a new report.
+
+The Worker adds the submitting client's public IP address and request user agent to each new issue. It uses Cloudflare's CF-Connecting-IP header and the request's User-Agent header, independently of the page payload. These are connection/browser diagnostics, not identity verification; a VPN or proxy changes the observed address and a client can customize its user agent. Missing headers are shown as unavailable. Previously created issues are not retroactively enriched.
+
+The Worker does not fetch the reported page URL or store captures separately. Reports and attachments, including IP address and browser information, follow Linear's access and retention settings. Treat HTML dumps as untrusted evidence: remove scripts and personal data before importing them into regression fixtures.
+
+## Reporting backend
+
+`backend/cloudflare.config.ts` defines the `cookie-cutter-reports` Worker, compatibility date, typed bindings, and observability. The Worker has no database or R2 bucket. File persistence belongs to Linear. Its submission use case uses a plain report model and an issue-tracker port; HTTP, Markdown and Linear GraphQL stay in adapters. `npm run backend:test` builds and executes the actual bundle in Cloudflare's workerd runtime with a fixture Linear gateway, checking authentication, validation, oversized uploads, attachments, issue routing and idempotency.
+
+Use `npm run backend:dev` for Cloudflare's local runtime at `http://127.0.0.1:8787`, and `npm run backend:build` to produce deployment output. The required secret binding is `LINEAR_API_KEY`. For local development, set it through an environment variable or an ignored `backend/.dev.vars` file. Do not commit credentials. `/health` returns `ready: false` until it is configured; this readiness check does not test Linear access.
+
+Production infrastructure is owned by the sibling **home-ops** repository:
+
+- `terraform/modules/cloudflare/cookie_cutter.tf`: Worker identity and `cookie-cutter.devtty.me` custom domain, including DNS and HTTPS.
+- `playbooks/apps/deploy-cookie-cutter.yml`: builds the existing checkout and deploys code and secrets from Ansible Vault.
+- `docs/cookie-cutter.md`: credential permissions, deployment, retention and acceptance checks.
+
+The application CLI does not manage the custom domain. Terraform does not contain application code or runtime secrets. The Cloudflare build tooling currently uses the `cf` CLI and its supported Vite plugin beta; npm's lockfile pins the tested versions. Deployment reuses home-ops' existing Cloudflare credential with Worker and route edit permissions, plus the dedicated Linear key. Run a real report and verify its issue and attachments after deployment; local and mocked tests do not prove production authorization.
+
+Keep `package.json`, `backend/package.json` and `public/manifest.json` versions aligned. Bump the extension version when distributing a new build; local rebuilds and reloads do not require a new version each time.
+
+## Continuous integration
+
+GitHub Actions runs `npm run check` on every push and pull request: formatting, TypeScript, extension builds, backend builds and tests in the workerd runtime, unit tests, and Chrome/Chromium integration tests. No production credentials are used. Successful runs provide a tested extension ZIP artifact; failed browser runs preserve diagnostic artifacts. Uploading a ZIP to GitHub does not auto-update unpacked extensions. Store publishing and remote rule-data delivery are separate release choices.
 
 ## Limitations
 
@@ -100,4 +144,4 @@ Import the rule into `src/rules/sites/index.ts` and add it to the `siteRules` ar
 - It prefers explicit reject labels.
 - It skips ambiguous banners instead of guessing.
 - Multi-step generic flows only open cookie preferences, click an explicit rejection, and dismiss a resulting notice.
-- Promotional matches require an overlay plus signup/incentive context; ordinary footer forms, carts and sign-in dialogs are preserved.
+- Promotional matches require an overlay plus signup/incentive context or visible promotional media; ordinary footer forms, carts and sign-in dialogs are preserved.

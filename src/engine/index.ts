@@ -3,6 +3,7 @@ import { runGenericHeuristics } from "./heuristics";
 import { debugLog } from "./debug";
 import { runMatchingRule } from "./rules";
 import { createDismissalState } from "../types";
+import { isVisible } from "./dom";
 import type {
   CookieRule,
   DetectionContext,
@@ -35,11 +36,26 @@ export async function executeDismissal(
   return runGenericHeuristics(state.clickedElements);
 }
 
-export function startCookieDismissal(rules: CookieRule[]): () => void {
+export function startCookieDismissal(
+  rules: CookieRule[],
+  onPopupClosed?: () => void,
+): () => void {
   const state = createDismissalState();
   const controller = new AbortController();
   let scanTimer: number | undefined;
   let running = false;
+  const pending = new Set<HTMLElement>();
+  const counted = new WeakSet<HTMLElement>();
+  const recordClosed = (): void => {
+    for (const popup of pending) {
+      if (isVisible(popup)) continue;
+      pending.delete(popup);
+      if (!counted.has(popup)) {
+        counted.add(popup);
+        onPopupClosed?.();
+      }
+    }
+  };
 
   const stop = (): void => {
     controller.abort();
@@ -56,7 +72,13 @@ export function startCookieDismissal(rules: CookieRule[]): () => void {
 
     running = true;
     try {
-      await executeDismissal(rules, state, controller.signal);
+      recordClosed();
+      const result = await executeDismissal(rules, state, controller.signal);
+      if (!controller.signal.aborted) {
+        if (result.matched && result.popup && !counted.has(result.popup))
+          pending.add(result.popup);
+        recordClosed();
+      }
     } catch (error) {
       stop();
       console.error("[cookie-cutter] Dismissal failed", error);
@@ -83,7 +105,10 @@ export function startCookieDismissal(rules: CookieRule[]): () => void {
     void runScan();
   };
 
-  const deadlineTimer = window.setTimeout(stop, OBSERVER_WINDOW_MS);
+  const deadlineTimer = window.setTimeout(() => {
+    recordClosed();
+    stop();
+  }, OBSERVER_WINDOW_MS);
   window.addEventListener("pagehide", stop, { once: true });
 
   if (document.readyState === "loading") {

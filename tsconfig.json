@@ -6,9 +6,17 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "noEmit": true,
-    "types": ["node", "vitest/globals"],
+    "allowImportingTsExtensions": true,
+    "types": ["node", "vitest/globals", "chrome"],
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["src", "test", "vite.config.ts", "playwright.config.ts"]
+  "include": [
+    "src",
+    "test",
+    "scripts",
+    "backend",
+    "vite.config.ts",
+    "playwright.config.ts"
+  ]
 }

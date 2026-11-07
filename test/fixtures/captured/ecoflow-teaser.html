@@ -1,0 +1,79 @@
+<div
+  class="email-subscription-popup__section"
+  id="email-subscription-popup"
+  style="
+    position: fixed;
+    bottom: 56px;
+    left: 56px;
+    width: 110px;
+    cursor: pointer;
+  "
+>
+  <a class="email-subscription-popup__section-trigger">
+    <div class="email-subscription-popup__trigger-inner">
+      <div class="email-subscription-popup__trigger-image-wrapper">
+        <img
+          class="hideMobile"
+          loading="lazy"
+          alt="Trigger Email Subscription Popup Image"
+          style="width: 110px; height: 106.578px"
+        />
+        <img
+          class="hideDesktop"
+          loading="lazy"
+          alt="Trigger Email Subscription Popup Image"
+          style="display: none; width: 90px"
+        />
+      </div>
+      <div
+        class="email-subscription-popup__trigger-close"
+        style="
+          position: absolute;
+          top: 0;
+          left: 98px;
+          width: 24px;
+          height: 24px;
+          cursor: pointer;
+        "
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            fill-rule="evenodd"
+            clip-rule="evenodd"
+            d="M12 2.79999C14.5403 2.79999 16.8403 3.82987 18.5052 5.4948C20.1702 7.15973 21.2001 9.45972 21.2001 12C21.2001 14.5403 20.1702 16.8402 18.5052 18.5052C16.8403 20.1701 14.5403 21.2 12 21.2C9.45978 21.2 7.15979 20.1701 5.49486 18.5052C3.82993 16.8402 2.80005 14.5403 2.80005 12C2.80005 9.45972 3.82993 7.15973 5.49486 5.4948C7.15979 3.82987 9.45978 2.79999 12 2.79999Z"
+            stroke="#ACACAC"
+            stroke-width="1.6"
+          ></path>
+          <path
+            d="M8.5 8.5L15.5 15.5M15.5 8.5L8.5 15.5"
+            stroke="#ACACAC"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+        </svg>
+      </div>
+    </div>
+  </a>
+  <div class="email-subscription-popup__wrapper" style="display: none">
+    <div class="email-subscription-popup__wrapper-inner">
+      <div class="email-subscription-popup__subscription">
+        <div class="email-subscription-popup__title--subscription">
+          🎁 Win Big with EcoFlow!
+        </div>
+        <p class="email-subscription-popup__desc--subscription">
+          Join our Black Friday mailing list for a chance to win from a
+          <strong>￡6,700</strong>prize pool!
+        </p>
+        <input type="email" placeholder="Email" name="contact[email]" />
+        <button type="button">Subscribe</button>
+      </div>
+      <div class="email-subscription-popup__sms" style="display: none">
+        <p class="email-subscription-popup__disclaimer--sms">
+          By signing up for text messages, you consent to receive marketing text
+          messages
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

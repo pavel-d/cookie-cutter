@@ -8,6 +8,7 @@ import {
   normalizeText,
 } from "./dom";
 import { STEP_POLL_MS } from "../rules/constants";
+import { findConsentContainer, findPromotionalContainer } from "./popups";
 import type {
   CookieRule,
   DetectionContext,
@@ -135,6 +136,7 @@ export async function runMatchingRule(
     debugLog("matched site rule", rule.id);
 
     let clicked = false;
+    let popup: HTMLElement | undefined;
     for (
       let index = progress.get(rule) ?? 0;
       index < rule.steps.length;
@@ -160,6 +162,11 @@ export async function runMatchingRule(
           ruleId: rule.id,
         };
       }
+      if (index === rule.steps.length - 1)
+        popup =
+          findConsentContainer(element) ??
+          findPromotionalContainer(element) ??
+          undefined;
       element.click();
       clicked = true;
       progress.set(rule, index + 1);
@@ -170,6 +177,7 @@ export async function runMatchingRule(
       clicked,
       reason: "site rule executed",
       ruleId: rule.id,
+      popup,
     };
   }
 

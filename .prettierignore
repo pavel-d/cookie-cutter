@@ -5,3 +5,5 @@ package-lock.json
 artifacts/
 test-results/
 playwright-report/
+.cloudflare/
+.wrangler/

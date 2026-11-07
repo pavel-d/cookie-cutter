@@ -15,6 +15,58 @@ describe("scan lifecycle", () => {
     stop = undefined;
   });
 
+  it("counts a removed popup once and excludes ineffective clicks", async () => {
+    document.body.innerHTML =
+      '<section class="cookie-banner"><p>We use cookies.</p><button>Reject all</button></section>';
+    const closed = vi.fn();
+    const banner = document.querySelector<HTMLElement>("section")!;
+    stop = startCookieDismissal([], closed);
+    await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * 2);
+    expect(closed).not.toHaveBeenCalled();
+    banner.remove();
+    await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
+    expect(closed).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * 2);
+    expect(closed).toHaveBeenCalledOnce();
+  });
+
+  it("does not count opening preferences, then counts the hidden banner", async () => {
+    document.body.innerHTML =
+      '<section class="cookie-banner"><p>We use cookies.</p><button>Preferences</button></section>';
+    const banner = document.querySelector<HTMLElement>("section")!;
+    banner.querySelector("button")!.addEventListener("click", () => {
+      banner.innerHTML = "<p>Cookie preferences</p><button>Deny all</button>";
+      banner.querySelector("button")!.addEventListener("click", () => {
+        banner.hidden = true;
+      });
+    });
+    const closed = vi.fn();
+    stop = startCookieDismissal([], closed);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(closed).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
+    expect(closed).toHaveBeenCalledOnce();
+  });
+
+  it("counts reject plus confirmation on the same banner as one closure", async () => {
+    document.body.innerHTML =
+      '<section class="cookie-banner"><p>We use cookies.</p><button>Reject all</button></section>';
+    const banner = document.querySelector<HTMLElement>("section")!;
+    banner.querySelector("button")!.addEventListener("click", () => {
+      banner.innerHTML =
+        "<p>You have rejected cookies.</p><button>Hide this message</button>";
+      banner
+        .querySelector("button")!
+        .addEventListener("click", () => banner.remove());
+    });
+    const closed = vi.fn();
+    stop = startCookieDismissal([], closed);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(closed).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS * 2);
+    expect(closed).toHaveBeenCalledOnce();
+  });
+
   it("rescans when an existing banner becomes visible", async () => {
     document.body.innerHTML = loadFixture("simple-banner.html");
     const banner = document.querySelector<HTMLElement>("#cookie-banner")!;

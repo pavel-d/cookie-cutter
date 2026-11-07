@@ -1,0 +1,108 @@
+:root {
+  color-scheme: light dark;
+  font:
+    13px/1.45 system-ui,
+    sans-serif;
+  color: CanvasText;
+  background: Canvas;
+}
+body {
+  width: 296px;
+  margin: 0;
+  padding: 16px;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+h1 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+#stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 12px 0 20px;
+}
+#stats > div + div {
+  border-left: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+  padding-left: 22px;
+}
+dt,
+.detail {
+  color: color-mix(in srgb, CanvasText 62%, Canvas);
+}
+dt {
+  font-size: 11px;
+}
+dd {
+  margin: 3px 0 0;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+[aria-busy="true"] dd {
+  color: transparent;
+  background: color-mix(in srgb, CanvasText 8%, Canvas);
+  border-radius: 3px;
+  width: 45px;
+}
+.report {
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+}
+.report > p:first-child {
+  margin: 0 0 10px;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border: 1px solid color-mix(in srgb, CanvasText 24%, Canvas);
+  border-radius: 5px;
+  background: ButtonFace;
+  color: ButtonText;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover {
+  background: color-mix(in srgb, ButtonFace 94%, CanvasText);
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid Highlight;
+  outline-offset: 3px;
+}
+.detail {
+  margin: 10px 0 0;
+  font-size: 11px;
+}
+#status,
+#stats-error {
+  margin: 10px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+#status:empty,
+#stats-error:empty {
+  display: none;
+}
+a {
+  color: LinkText;
+}
