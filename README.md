@@ -17,7 +17,7 @@ Open `chrome://extensions`, enable **Developer mode**, then **Load unpacked** an
 
 Click the extension icon → **Report a popup** → select the unwanted element. An on-page notification confirms submission or shows an error; Escape cancels selection.
 
-Reports include page HTML, a viewport screenshot, the selected element's selector, browser information and public IP address. HTML may contain personal information. Reports create **Triage** issues in Linear's **Cookie Cutter** project, labelled **automated-report** and delegated to **@Codex**.
+Reports include page HTML, a viewport screenshot, the selected element's selector, browser information and public IP address. HTML may contain personal information. Reports create unassigned **Triage** issues in Linear's **Cookie Cutter** project, labelled **automated-report**.
 
 ## Development
 

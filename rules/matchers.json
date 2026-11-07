@@ -62,11 +62,11 @@
     "noOtherCookies": "will not use any other cookies",
     "signup": "\\b(?:subscribe|newsletter|mailing list|sign up|signing up)\\b",
     "incentive": "\\b(?:rewards?|welcome gift|discount|first order|exclusive offers?)\\b",
-    "discount": "(?:[£$€]\\s*\\d+(?:[.,]\\d+)*|\\d+(?:[.,]\\d+)*\\s*%)\\s*off",
+    "discount": "(?:[£￡$€¥]\\s*\\d+(?:[.,]\\d+)*|\\d+(?:[.,]\\d+)*\\s*%)\\s*off",
     "rewards": "\\b(?:redeem|claim) (?:your )?rewards?\\b"
   },
   "selectors": {
-    "closeTargets": "button, a, input[type='button'], input[type='submit'], [role='button'], [class], [id], [title], img[alt]",
+    "closeTargets": "button, a, input[type='button'], input[type='submit'], [role='button'], [class], [id], [title], img[alt], [style]",
     "headings": "h1, h2, h3, [role='heading']",
     "formControls": "input, select, textarea",
     "media": "img, [role='img']",
@@ -75,5 +75,11 @@
     "email": "input[type='email'], input[autocomplete='email']"
   },
   "threshold": 7,
+  "imageClose": {
+    "minSize": 12,
+    "maxSize": 48,
+    "minContainerScale": 4,
+    "maxAspectRatio": 2
+  },
   "sites": []
 }

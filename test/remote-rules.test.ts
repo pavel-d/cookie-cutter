@@ -157,6 +157,9 @@ describe("signed remote matching rules", () => {
     { ...data, labels: { ...data.labels, reject: [null] } },
     { ...data, patterns: { ...data.patterns, signup: "[" } },
     { ...data, threshold: -1 },
+    { ...data, imageClose: { ...data.imageClose, minSize: -1 } },
+    { ...data, imageClose: { ...data.imageClose, minSize: 49, maxSize: 48 } },
+    { ...data, imageClose: { ...data.imageClose, maxAspectRatio: 0 } },
   ])("rejects invalid rule data", (value) => {
     expect(() => parseRuleset(value)).toThrow();
   });

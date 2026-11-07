@@ -1,18 +1,21 @@
 # Captured popup fixtures
 
+`aliexpress-coupons.html` is the coupon overlay from PAV-91's full-page report. Its captured inline layout, unlabelled corner image control, coupon text and full-width pound signs are preserved. Only the popup subtree is retained; tracking attributes and external image/background URLs are removed. Browser tests model dismissal and offer-opening handlers, assert that only the close control is invoked, and run an identical copy without vendor identifiers. The raw HTML and screenshot remain under ignored `artifacts/live/2026-11-07/pav-91/`.
+
 Captured from the user's already-open Chrome tabs on 2026-11-07. These are DOM extracts, not recreated example banners.
 
-| Capture                                | Source                          | Expected action sequence                       |
-| -------------------------------------- | ------------------------------- | ---------------------------------------------- |
-| `home-office.html`                     | Home Office UKVI sign-in        | Reject all, then Hide this message             |
-| `nhs.html`                             | NHS App Online login            | Close the necessary-cookies notice             |
-| `dusk.html`, `dusk-preferences.html`   | DUSK sofas collection           | Preferences, then Deny all                     |
-| `daals.html`, `daals-preferences.html` | daals dining chairs collection  | Manage Settings, then Deny All                 |
-| `ecoflow.html`                         | EcoFlow UK homepage             | Reject all inside an open shadow root          |
-| `ecoflow-teaser.html`                  | EcoFlow UK homepage             | Close the floating subscription gift teaser    |
-| `aliexpress-bestseller.html`           | User-supplied AliExpress markup | Close the image-only bestseller teaser         |
-| `castlery.html`                        | Castlery Harper dining table    | Close dialog on the newsletter/rewards overlay |
-| `castlery-teaser.html`                 | Castlery Harper dining table    | Close teaser on the floating Get £50 off offer |
+| Capture                                | Source                          | Expected action sequence                                 |
+| -------------------------------------- | ------------------------------- | -------------------------------------------------------- |
+| `home-office.html`                     | Home Office UKVI sign-in        | Reject all, then Hide this message                       |
+| `nhs.html`                             | NHS App Online login            | Close the necessary-cookies notice                       |
+| `dusk.html`, `dusk-preferences.html`   | DUSK sofas collection           | Preferences, then Deny all                               |
+| `daals.html`, `daals-preferences.html` | daals dining chairs collection  | Manage Settings, then Deny All                           |
+| `ecoflow.html`                         | EcoFlow UK homepage             | Reject all inside an open shadow root                    |
+| `ecoflow-teaser.html`                  | EcoFlow UK homepage             | Close the floating subscription gift teaser              |
+| `aliexpress-bestseller.html`           | User-supplied AliExpress markup | Close the image-only bestseller teaser                   |
+| `aliexpress-coupons.html`              | PAV-91 AliExpress HTML report   | Close the unlabelled image control on the coupon overlay |
+| `castlery.html`                        | Castlery Harper dining table    | Close dialog on the newsletter/rewards overlay           |
+| `castlery-teaser.html`                 | Castlery Harper dining table    | Close teaser on the floating Get £50 off offer           |
 
 The DUSK and EcoFlow fixtures include their actual shadow content in declarative `<template shadowrootmode="open">` wrappers. The fixture harness hydrates those roots before running the extension. DUSK and daals preferences states were captured after opening their settings using the site's controls. Home Office's confirmation is present, initially hidden, in its captured markup.
 

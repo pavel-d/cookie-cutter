@@ -56,14 +56,12 @@ export default {
     if (request.method === "GET" && url.pathname === "/health")
       return json({
         service: "cookie-cutter-reports",
-        ready: Boolean(
-          env.LINEAR_API_KEY && env.LINEAR_STATE_ID && env.LINEAR_DELEGATE_ID,
-        ),
+        ready: Boolean(env.LINEAR_API_KEY && env.LINEAR_STATE_ID),
       });
     if (url.pathname !== "/reports") return json({ error: "Not found." }, 404);
     if (request.method !== "POST")
       return json({ error: "Method not allowed." }, 405);
-    if (!env.LINEAR_API_KEY || !env.LINEAR_STATE_ID || !env.LINEAR_DELEGATE_ID)
+    if (!env.LINEAR_API_KEY || !env.LINEAR_STATE_ID)
       return json({ error: "Reporting is not configured yet." }, 503);
     if (request.headers.get("Authorization") !== `Bearer ${REPORT_TOKEN}`)
       return json({ error: "Unauthorized." }, 401);
@@ -133,7 +131,6 @@ export default {
         projectId: env.LINEAR_PROJECT_ID,
         labelId: env.LINEAR_LABEL_ID,
         stateId: env.LINEAR_STATE_ID,
-        delegateId: env.LINEAR_DELEGATE_ID,
       });
       return json(await submitReport(report, tracker), 201);
     } catch (error) {

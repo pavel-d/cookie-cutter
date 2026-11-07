@@ -32,6 +32,12 @@ const captures = [
       #fixture img:last-child { display: block; width: 32px; height: 32px; }
     `,
   },
+  {
+    name: "aliexpress-coupons",
+    clicks: ["close"],
+    closeSelector: "#fixture > div > div > div > div:last-child",
+    openSelector: "#fixture > div > div > div > div:nth-child(3) > div",
+  },
   { name: "castlery", clicks: ["close dialog"] },
   { name: "castlery-teaser", clicks: ["close teaser"] },
 ];
@@ -265,6 +271,60 @@ for (const imageLabel of ["Sale: Shop now", "BESTSELLERS"]) {
     await expect(page.locator("#unrelated")).toBeVisible();
   });
 }
+
+test("preserves ambiguous unlabelled image controls", async ({ page }) => {
+  await page.route("**/*", (route) => route.abort());
+  await page.clock.install();
+  const cases = [
+    { text: "Photo preview", style: "", label: "" },
+    { text: "Get £50 off", style: "", label: "Shop now" },
+    { text: "Get £50 off", style: "width: 80px; height: 80px", label: "" },
+    { text: "Get £50 off", style: "width: 4px; height: 4px", label: "" },
+    { text: "Get £50 off", style: "top: 80px; right: 150px", label: "" },
+    { text: "Get £50 off", style: "bottom: 0; top: auto", label: "" },
+    {
+      text: "Get £50 off",
+      style: "",
+      label: "",
+      heading: "Your shopping cart",
+    },
+    {
+      text: "Get £50 off",
+      style: "",
+      label: "",
+      heading: "Sign in to your account",
+    },
+    { text: "Get £50 off", style: "", label: "", form: true },
+    { text: "Get £50 off. We use cookies.", style: "", label: "" },
+    { text: "Get £50 off", style: "", label: "", link: true },
+    { text: "Get £50 off", style: "", label: "", imageLabel: "Zoom image" },
+  ];
+  await page.setContent(
+    cases
+      .map(
+        (example, index) => `
+    <aside style="position: fixed; top: 30px; left: 30px; width: 400px; height: 200px">
+      <h2>${example.heading ?? "Notice"}</h2><p>${example.text}</p>
+      <img width="200" height="100">
+      ${example.form ? '<input type="email">' : ""}
+      <${example.link ? 'a href="/shop"' : "div"} data-control="${index}" aria-label="${example.label}" style="position: absolute; cursor: pointer; width: 28px; height: 28px; top: 0; right: 0; ${example.style}"><img alt="${example.imageLabel ?? ""}" width="15" height="15"></${example.link ? "a" : "div"}>
+    </aside>`,
+      )
+      .join(""),
+  );
+  await page.evaluate(() => {
+    document.body.dataset.controls = "[]";
+    document.addEventListener("click", (event) => {
+      const control = (event.target as Element).closest("[data-control]");
+      const clicked = JSON.parse(document.body.dataset.controls!) as string[];
+      clicked.push(control?.getAttribute("data-control") ?? "other");
+      document.body.dataset.controls = JSON.stringify(clicked);
+    });
+  });
+  await page.addScriptTag({ path: bundlePath });
+  await page.clock.runFor(16000);
+  await expect(page.locator("body")).toHaveAttribute("data-controls", "[]");
+});
 
 test("discovers a newly attached nested shadow popup and respects hidden or inert hosts", async ({
   page,

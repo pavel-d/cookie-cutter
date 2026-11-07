@@ -8,6 +8,7 @@ import { loadFixture } from "./helpers";
 describe("floating promotional offers", () => {
   it.each([
     ["Get £50 off", "Close teaser"],
+    ["Get ￡50 off", "Close offer"],
     ["Get $20 off", "Close offer"],
     ["Save €100.50 off", "Close promotion"],
     ["Get 25% off", "Close teaser"],

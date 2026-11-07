@@ -18,7 +18,6 @@ export default defineConfig({
       LINEAR_PROJECT_ID: bindings.text("fd3c6688-5add-4c62-b1ae-b656cefa7fd4"),
       LINEAR_LABEL_ID: bindings.text("d51db1d1-ed11-48d8-bf1e-3106d86fdf13"),
       LINEAR_STATE_ID: bindings.text("5cdd95d1-9150-499d-b73b-32eb340e4ebb"),
-      LINEAR_DELEGATE_ID: bindings.text("d11cad3d-1771-40e4-aa8a-f2cc7e54994e"),
     },
     observability: {
       enabled: true,

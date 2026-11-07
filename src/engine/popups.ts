@@ -16,6 +16,61 @@ function getIdentity(element: Element): string {
   );
 }
 
+function isUnlabelledImageControl(
+  rules: MatcherRules,
+  element: HTMLElement,
+): boolean {
+  const parent = getComposedParent(element);
+  const style = window.getComputedStyle(element);
+  if (
+    !parent ||
+    style.position !== "absolute" ||
+    style.cursor !== "pointer" ||
+    element instanceof HTMLAnchorElement
+  )
+    return false;
+  const images = Array.from(
+    element.querySelectorAll(rules.selectors.media),
+  ).filter((node) => node instanceof HTMLElement && isVisible(node));
+  if (images.length !== 1) return false;
+  const image = images[0] as HTMLElement;
+  if (
+    [
+      getElementLabel(image),
+      normalizeText(image.getAttribute("alt")),
+      normalizeText(image.getAttribute("title")),
+    ].some(
+      (label) =>
+        label &&
+        !rules.labels.close.includes(label) &&
+        !rules.labels.icons.includes(label),
+    )
+  )
+    return false;
+  const bounds = element.getBoundingClientRect();
+  const container = parent.getBoundingClientRect();
+  const limits = rules.imageClose;
+  const smaller = Math.min(bounds.width, bounds.height);
+  const larger = Math.max(bounds.width, bounds.height);
+  if (
+    smaller < limits.minSize ||
+    larger > limits.maxSize ||
+    larger / smaller > limits.maxAspectRatio ||
+    container.width < bounds.width * limits.minContainerScale ||
+    container.height < bounds.height * limits.minContainerScale
+  )
+    return false;
+  const centerX = bounds.left + bounds.width / 2;
+  const centerY = bounds.top + bounds.height / 2;
+  // A small, otherwise unlabelled image control at either top corner is only
+  // actionable after findPromotionalContainer also establishes safe context.
+  return (
+    Math.abs(centerY - container.top) <= bounds.height &&
+    (Math.abs(centerX - container.left) <= bounds.width ||
+      Math.abs(centerX - container.right) <= bounds.width)
+  );
+}
+
 export function getCloseLabel(
   rules: MatcherRules,
   element: HTMLElement,
@@ -39,8 +94,9 @@ export function getCloseLabel(
   if (
     !title &&
     !alt &&
-    rules.patterns.closeIdentity.test(getIdentity(element)) &&
-    window.getComputedStyle(element).cursor === "pointer"
+    ((rules.patterns.closeIdentity.test(getIdentity(element)) &&
+      window.getComputedStyle(element).cursor === "pointer") ||
+      isUnlabelledImageControl(rules, element))
   ) {
     return "close";
   }
@@ -111,9 +167,10 @@ function isPromotionalMediaOverlay(
   const text = normalizeText(container.innerText ?? container.textContent);
   if (
     overlay &&
-    rules.patterns.promotionalMedia.test(
+    (rules.patterns.promotionalMedia.test(
       `${identity} ${text} ${normalizeText(imageLabels)}`,
-    )
+    ) ||
+      rules.patterns.discount.test(text))
   ) {
     return true;
   }

@@ -34,12 +34,19 @@ const selectorKeys = [
   "consentRegion",
   "email",
 ] as const;
+const imageCloseKeys = [
+  "minSize",
+  "maxSize",
+  "minContainerScale",
+  "maxAspectRatio",
+] as const;
 
 export interface MatcherRules {
   labels: Record<(typeof labelKeys)[number], string[]>;
   patterns: Record<(typeof patternKeys)[number], RegExp>;
   selectors: Record<(typeof selectorKeys)[number], string>;
   threshold: number;
+  imageClose: Record<(typeof imageCloseKeys)[number], number>;
   sites: CookieRule[];
 }
 
@@ -91,6 +98,13 @@ function boundedNumber(value: unknown, maximum: number): number {
 export function parseRuleset(value: unknown): MatcherRules {
   const input = object(value);
   if (input.schemaVersion !== 1) throw new Error("Unsupported rules schema.");
+  const imageClose = fields(input.imageClose, imageCloseKeys, (value) => {
+    const number = boundedNumber(value, 256);
+    if (number === 0) throw new Error("Invalid image close limit.");
+    return number;
+  });
+  if (imageClose.minSize > imageClose.maxSize)
+    throw new Error("Invalid image close size range.");
   if (!Array.isArray(input.sites) || input.sites.length > 512)
     throw new Error("Invalid site rules.");
   const ids = new Set<string>();
@@ -158,6 +172,7 @@ export function parseRuleset(value: unknown): MatcherRules {
     ),
     selectors: fields(input.selectors, selectorKeys, text),
     threshold: boundedNumber(input.threshold, 100),
+    imageClose,
     sites,
   };
 }
