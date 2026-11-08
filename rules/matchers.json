@@ -7,6 +7,7 @@
       "reject all",
       "reject all cookies",
       "reject cookies",
+      "reject analytics cookies",
       "reject non-essential",
       "reject non essential",
       "reject non-essential cookies",
@@ -44,7 +45,8 @@
       "dismiss",
       "no thanks",
       "not now",
-      "hide this message"
+      "hide this message",
+      "hide cookie message"
     ],
     "offerClose": ["close teaser", "close offer", "close promotion"],
     "icons": ["x", "×", "✕", "✖"],
