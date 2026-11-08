@@ -47,6 +47,26 @@ describe("generic heuristics", () => {
     expect(candidate?.label).toContain("reject all");
   });
 
+  it("rejects cookies in the captured mobile banner without accepting or postponing", () => {
+    document.body.innerHTML = loadFixture("captured/aliexpress-consent.html");
+    const banner = document.querySelector<HTMLElement>("._15PXW")!;
+    const clicks: string[] = [];
+    for (const control of banner.querySelectorAll("button, span"))
+      control.addEventListener("click", () =>
+        clicks.push(control.textContent!.trim()),
+      );
+
+    expect(findBestCandidate(matcherRules)).toMatchObject({
+      label: "reject cookies",
+      reason: "explicit reject label",
+      popup: banner,
+    });
+    const clicked = new WeakSet<HTMLElement>();
+    expect(runGenericHeuristics(matcherRules, clicked).clicked).toBe(true);
+    expect(runGenericHeuristics(matcherRules, clicked).clicked).toBe(false);
+    expect(clicks).toEqual(["Reject cookies"]);
+  });
+
   it("skips unrelated privacy copy that is not a banner", () => {
     document.body.innerHTML = loadFixture("false-positive.html");
 
@@ -75,6 +95,12 @@ describe("generic heuristics", () => {
 
   it("ignores reject actions in ordinary page content even with long cookie copy", () => {
     document.body.innerHTML = `<main><p>${"Cookie policy information. ".repeat(20)}</p><button>Reject all</button></main>`;
+    expect(findBestCandidate(matcherRules)).toBeNull();
+  });
+
+  it("leaves inline Reject cookies controls outside consent UI alone", () => {
+    document.body.innerHTML =
+      "<article><p>Read our cookie policy.</p><button>Reject cookies</button></article>";
     expect(findBestCandidate(matcherRules)).toBeNull();
   });
 

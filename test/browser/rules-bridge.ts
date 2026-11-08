@@ -3,7 +3,10 @@ import rules from "../../rules/matchers.json" with { type: "json" };
 
 export const fixtureRulesDocument = { revision: "a".repeat(64), rules };
 
-export async function installRulesBridge(page: Page): Promise<void> {
+export async function installRulesBridge(
+  page: Page,
+  document = fixtureRulesDocument,
+): Promise<void> {
   await page.evaluate((document) => {
     type Message = { type: string; document?: unknown };
     const callbacks: ((message: Message, sender: { id: string }) => void)[] =
@@ -34,5 +37,5 @@ export async function installRulesBridge(page: Page): Promise<void> {
         },
       },
     });
-  }, fixtureRulesDocument);
+  }, document);
 }

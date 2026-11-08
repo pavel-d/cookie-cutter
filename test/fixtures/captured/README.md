@@ -1,5 +1,7 @@
 # Captured popup fixtures
 
+`aliexpress-consent.html` comes from PAV-92's iPhone Safari report on 2026-11-08. It preserves the mobile Cookie preferences banner's text, nested elements, hashed classes and all three button labels. The **Reject cookies** control is an explicit rejection; **Later**, **Accept cookies** and **Personalize cookies** must remain untouched. Tracking attributes and the external Cookie Notice URL are removed. Relevant layout and button styles are inlined from the exact public `cosmos/0.0.453/msite/gdpr.css` stylesheet linked in the capture; the full page and stylesheet remain under ignored `artifacts/live/2026-11-08/pav-92/`. The browser harness models dismissal after rejection because the report does not preserve the site's JavaScript handlers. Chrome and WebKit tests run the captured and rebranded variants; they do not establish live AliExpress acceptance.
+
 `aliexpress-coupons.html` is the coupon overlay from PAV-91's full-page report. Its captured inline layout, unlabelled corner image control, coupon text and full-width pound signs are preserved. Only the popup subtree is retained; tracking attributes and external image/background URLs are removed. Browser tests install dismissal and offer-opening handlers and assert that removal invokes neither, including in an identical copy without vendor identifiers. The raw HTML and screenshot remain under ignored `artifacts/live/2026-11-07/pav-91/`.
 
 Captured from the user's already-open Chrome tabs on 2026-11-07. These are DOM extracts, not recreated example banners.
@@ -14,6 +16,7 @@ Captured from the user's already-open Chrome tabs on 2026-11-07. These are DOM e
 | `ecoflow-teaser.html`                  | EcoFlow UK homepage             | Close the floating subscription gift teaser             |
 | `aliexpress-bestseller.html`           | User-supplied AliExpress markup | Close the image-only bestseller teaser                  |
 | `aliexpress-coupons.html`              | PAV-91 AliExpress HTML report   | Remove the coupon overlay and backdrop without clicking |
+| `aliexpress-consent.html`              | PAV-92 iPhone Safari report     | Reject cookies                                          |
 | `castlery.html`                        | Castlery Harper dining table    | Close dialog on the newsletter/rewards overlay          |
 | `castlery-teaser.html`                 | Castlery Harper dining table    | Close teaser on the floating Get £50 off offer          |
 

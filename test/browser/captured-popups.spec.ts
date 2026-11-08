@@ -14,6 +14,7 @@ const captures = [
   { name: "dusk", clicks: ["preferences", "deny all"] },
   { name: "daals", clicks: ["manage settings", "deny all"] },
   { name: "ecoflow", clicks: ["reject all"] },
+  { name: "aliexpress-consent", clicks: ["reject cookies"] },
   {
     name: "ecoflow-teaser",
     promotional: true,
@@ -57,7 +58,7 @@ function readCapture(name: string): string {
 // while removing vendor identities. Production detection must not use a brand.
 function rebrand(html: string): string {
   return html.replace(
-    /govuk|nhsuk|nhs|pandectes|daals|ecoflow|castlery|klaviyo|aliexpress|drogue|pop-picture|close-btn/gi,
+    /govuk|nhsuk|nhs|pandectes|daals|ecoflow|castlery|klaviyo|aliexpress|voyager|drogue|pop-picture|close-btn/gi,
     "otherbrand",
   );
 }
@@ -152,6 +153,7 @@ for (const capture of captures) {
                 [
                   "deny all",
                   "reject all",
+                  "reject cookies",
                   "close",
                   "close dialog",
                   "close teaser",
