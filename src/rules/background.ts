@@ -1,3 +1,4 @@
+import { describeError, logError } from "../browser/errors";
 import { UpdateRules, type ActiveRules } from "./update-rules";
 import {
   createRulesVerifier,
@@ -110,8 +111,7 @@ export function registerRuleUpdates(): void {
     return updated;
   }
 
-  const logFailure = (error: unknown) =>
-    console.error("[cookie-cutter] Rules update failed", error);
+  const logFailure = (error: unknown) => logError("Rules update failed", error);
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (message?.type !== "get-matching-rules") return;
     if (sender.id !== chrome.runtime.id || sender.frameId !== 0) return;
@@ -125,7 +125,7 @@ export function registerRuleUpdates(): void {
       .catch((error) => {
         logFailure(error);
         respond({
-          error: "Matching rules are unavailable. Please try again shortly.",
+          error: describeError(error),
         });
       });
     return true;

@@ -46,6 +46,17 @@ export function parseRulesDocument(value: unknown): RulesDocument {
   return { revision: value.revision, rules: value.rules };
 }
 
+async function rulesOperation<T>(
+  context: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    throw new Error(context, { cause: error });
+  }
+}
+
 // The source and persistence adapters own HTTP and browser storage. This use
 // case only replaces the cached rules after a complete document validates.
 export class UpdateRules {
@@ -59,10 +70,16 @@ export class UpdateRules {
   ) {}
 
   async cached(): Promise<ActiveRules | undefined> {
-    const cached = await this.store.read();
+    const cached = await rulesOperation(
+      "Could not read cached matching rules.",
+      () => this.store.read(),
+    );
     if (!cached) return undefined;
     return {
-      document: await this.verify(cached.document),
+      document: await rulesOperation(
+        "Could not verify cached matching rules.",
+        () => this.verify(cached.document),
+      ),
       checkedAt: cached.checkedAt,
     };
   }
@@ -77,17 +94,34 @@ export class UpdateRules {
   }
 
   private async refreshOnce(): Promise<ActiveRules> {
-    const cached = await this.store.read();
-    const previous = cached ? await this.verify(cached.document) : undefined;
-    const response = await this.source.fetch(previous?.revision);
+    const cached = await rulesOperation(
+      "Could not read cached matching rules.",
+      () => this.store.read(),
+    );
+    const previous = cached
+      ? await rulesOperation("Could not verify cached matching rules.", () =>
+          this.verify(cached.document),
+        )
+      : undefined;
+    const response = await rulesOperation(
+      "Could not download matching rules.",
+      () => this.source.fetch(previous?.revision),
+    );
     if (!response && !cached)
       throw new Error("Rules server returned no initial rules.");
-    const document = response ? await this.verify(response) : previous!;
+    const document = response
+      ? await rulesOperation(
+          "Could not verify downloaded matching rules.",
+          () => this.verify(response),
+        )
+      : previous!;
     const checkedAt = this.now();
-    await this.store.write({
-      document: response ?? cached!.document,
-      checkedAt,
-    });
+    await rulesOperation("Could not save matching rules.", () =>
+      this.store.write({
+        document: response ?? cached!.document,
+        checkedAt,
+      }),
+    );
     return { document, checkedAt };
   }
 }
