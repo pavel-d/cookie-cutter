@@ -67,7 +67,6 @@ describe("generic heuristics", () => {
     expect(clicks).toEqual(["Reject cookies"]);
   });
 
-
   it("rejects analytics cookies in the NHS login banner without accepting them", () => {
     // Synthetic control markup based on PAV-93's reported banner text.
     // The original complete HTML capture could not be retrieved here.
