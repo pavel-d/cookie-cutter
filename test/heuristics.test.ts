@@ -67,6 +67,48 @@ describe("generic heuristics", () => {
     expect(clicks).toEqual(["Reject cookies"]);
   });
 
+
+  it("rejects analytics cookies in the NHS login banner without accepting them", () => {
+    // Synthetic control markup based on PAV-93's reported banner text.
+    // The original complete HTML capture could not be retrieved here.
+    document.body.innerHTML = `
+      <div id="nhsuk-cookie-banner">
+        <p>We use essential cookies to make this service work.</p>
+        <p>We would also like to use analytics cookies to improve our service.</p>
+        <button>Accept analytics cookies</button>
+        <button>Reject analytics cookies</button>
+      </div>
+    `;
+    const clicks: string[] = [];
+    document.querySelectorAll("button").forEach((button) => {
+      button.addEventListener("click", () =>
+        clicks.push(button.textContent!.trim().toLowerCase()),
+      );
+    });
+
+    expect(findBestCandidate(matcherRules)).toMatchObject({
+      label: "reject analytics cookies",
+      reason: "explicit reject label",
+    });
+    const clicked = new WeakSet<HTMLElement>();
+    expect(runGenericHeuristics(matcherRules, clicked).clicked).toBe(true);
+    expect(runGenericHeuristics(matcherRules, clicked).clicked).toBe(false);
+    expect(clicks).toEqual(["reject analytics cookies"]);
+  });
+
+  it("dismisses a confirmed NHS analytics rejection, not an ambiguous choice", () => {
+    document.body.innerHTML = `
+      <div id="nhsuk-cookie-banner">
+        <p>You've rejected analytics cookies.</p>
+        <button>Hide cookie message</button>
+      </div>
+    `;
+    expect(findBestCandidate(matcherRules)).toMatchObject({
+      label: "hide cookie message",
+      reason: "dismiss cookie notice",
+    });
+  });
+
   it("skips unrelated privacy copy that is not a banner", () => {
     document.body.innerHTML = loadFixture("false-positive.html");
 
