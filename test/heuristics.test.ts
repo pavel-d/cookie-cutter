@@ -68,7 +68,7 @@ describe("generic heuristics", () => {
   });
 
   it("rejects analytics cookies in the NHS login banner without accepting them", () => {
-    // Synthetic control markup based on PAV-93's reported banner text.
+    // Synthetic control markup; replace with a sanitised submitted capture before merge.
     // The original complete HTML capture could not be retrieved here.
     document.body.innerHTML = `
       <div id="nhsuk-cookie-banner">
