@@ -107,6 +107,35 @@ test("unpacked Manifest V3 extension reports without token setup using real Chro
       ),
     ).toBe(15);
 
+    const updateFailures: string[] = [];
+    context.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        message.text().includes("[cookie-cutter] Rules update failed")
+      )
+        updateFailures.push(message.text());
+    });
+    await worker.evaluate(async () => {
+      globalThis.fetch = async () => {
+        throw new DOMException("The rules request timed out.", "TimeoutError");
+      };
+      await chrome.alarms.create("refresh-matching-rules", {
+        when: Date.now(),
+      });
+    });
+    await expect
+      .poll(() => updateFailures.join("\n"))
+      .toContain(
+        "Error: Could not download matching rules.\nCaused by: TimeoutError: The rules request timed out.",
+      );
+    expect(
+      await worker.evaluate(
+        async () =>
+          (await chrome.storage.local.get("signedMatchingRules"))
+            .signedMatchingRules,
+      ),
+    ).toMatchObject({ document: { revision: initialSignedRules.revision } });
+
     await website.evaluate(() => {
       const banner = document.createElement("section");
       banner.className = "cookie-banner";

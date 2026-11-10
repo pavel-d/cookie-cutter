@@ -84,12 +84,17 @@ describe("signed remote matching rules", () => {
       }),
     };
     const updater = new UpdateRules(store, source, verify, () => 2);
-    await expect(updater.refresh()).rejects.toThrow(
-      "signature verification failed",
-    );
+    await expect(updater.refresh()).rejects.toMatchObject({
+      message: "Could not verify downloaded matching rules.",
+      cause: { message: "Rules signature verification failed." },
+    });
     expect(store.write).not.toHaveBeenCalled();
-    source.fetch.mockRejectedValue(new Error("Offline"));
-    await expect(updater.refresh()).rejects.toThrow("Offline");
+    const original = new Error("Offline");
+    source.fetch.mockRejectedValue(original);
+    await expect(updater.refresh()).rejects.toMatchObject({
+      message: "Could not download matching rules.",
+      cause: original,
+    });
     expect(await updater.cached()).toEqual({
       document: { revision: initial.revision, rules: data },
       checkedAt: 1,
@@ -106,12 +111,12 @@ describe("signed remote matching rules", () => {
     };
     const source = { fetch: vi.fn() };
     const updater = new UpdateRules(store, source, verify, () => 2);
-    await expect(updater.cached()).rejects.toThrow(
-      "digest verification failed",
-    );
-    await expect(updater.refresh()).rejects.toThrow(
-      "digest verification failed",
-    );
+    const failure = {
+      message: "Could not verify cached matching rules.",
+      cause: { message: "Rules digest verification failed." },
+    };
+    await expect(updater.cached()).rejects.toMatchObject(failure);
+    await expect(updater.refresh()).rejects.toMatchObject(failure);
     expect(source.fetch).not.toHaveBeenCalled();
     expect(store.write).not.toHaveBeenCalled();
   });
@@ -126,6 +131,47 @@ describe("signed remote matching rules", () => {
       checkedAt: 2,
     });
     expect(source.fetch).toHaveBeenCalledWith(initial.revision);
+  });
+
+  it("preserves a download timeout's original cause and allows the next refresh", async () => {
+    const original = new DOMException(
+      "The operation timed out.",
+      "TimeoutError",
+    );
+    const store = { read: async () => undefined, write: vi.fn() };
+    const source = {
+      fetch: vi.fn().mockRejectedValueOnce(original).mockResolvedValue(initial),
+    };
+    const updater = new UpdateRules(store, source, verify, () => 2);
+    const error = await updater.refresh().catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Could not download matching rules.");
+    expect((error as Error).cause).toBe(original);
+    expect(store.write).not.toHaveBeenCalled();
+    expect((await updater.refresh()).document.revision).toBe(initial.revision);
+    expect(store.write).toHaveBeenCalledOnce();
+  });
+
+  it("distinguishes storage read and write failures without losing their causes", async () => {
+    const original = new DOMException("Storage unavailable", "UnknownError");
+    const store = { read: vi.fn().mockRejectedValue(original), write: vi.fn() };
+    const source = { fetch: vi.fn().mockResolvedValue(initial) };
+    const updater = new UpdateRules(store, source, verify, () => 2);
+    await expect(updater.cached()).rejects.toMatchObject({
+      message: "Could not read cached matching rules.",
+      cause: original,
+    });
+    await expect(updater.refresh()).rejects.toMatchObject({
+      message: "Could not read cached matching rules.",
+      cause: original,
+    });
+    expect(source.fetch).not.toHaveBeenCalled();
+    store.read.mockResolvedValue(undefined);
+    store.write.mockRejectedValue(original);
+    await expect(updater.refresh()).rejects.toMatchObject({
+      message: "Could not save matching rules.",
+      cause: original,
+    });
   });
 
   it("coalesces downloads and commits a verified update once", async () => {

@@ -14,6 +14,7 @@ import {
   getCloseLabel,
 } from "./popups";
 import type { ClickCandidate, ExecutionResult } from "../types";
+import { findCookiePreferenceCandidate } from "./preferences";
 
 export function scoreCandidate(
   rules: MatcherRules,
@@ -39,7 +40,10 @@ export function findBestCandidate(
   rules: MatcherRules,
   clickedElements: WeakSet<HTMLElement> = new WeakSet(),
 ): ClickCandidate | null {
-  let best: ClickCandidate | null = null;
+  let best: ClickCandidate | null = findCookiePreferenceCandidate(
+    rules,
+    clickedElements,
+  );
 
   const labels = [...rules.labels.reject, ...rules.labels.preferences];
   const targets = new Set(

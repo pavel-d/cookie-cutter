@@ -7,7 +7,6 @@
       "reject all",
       "reject all cookies",
       "reject cookies",
-      "reject analytics cookies",
       "reject non-essential",
       "reject non essential",
       "reject non-essential cookies",
@@ -29,6 +28,7 @@
       "manage settings",
       "cookie settings",
       "cookie preferences",
+      "choose your cookies",
       "manage cookies",
       "customize",
       "customise",
@@ -45,8 +45,7 @@
       "dismiss",
       "no thanks",
       "not now",
-      "hide this message",
-      "hide cookie message"
+      "hide this message"
     ],
     "offerClose": ["close teaser", "close offer", "close promotion"],
     "icons": ["x", "×", "✕", "✖"],
