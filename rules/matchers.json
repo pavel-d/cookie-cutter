@@ -20,7 +20,12 @@
       "essential only",
       "essential cookies only",
       "use necessary cookies only",
-      "continue without accepting"
+      "continue without accepting",
+      "reject additional cookies",
+      "reject analytics cookies",
+      "i do not accept",
+      "continue without consent",
+      "continue without consent - close the widget without accepting cookie settings"
     ],
     "preferences": [
       "preferences",
@@ -45,7 +50,9 @@
       "dismiss",
       "no thanks",
       "not now",
-      "hide this message"
+      "hide this message",
+      "hide cookie message",
+      "hide cookies message"
     ],
     "offerClose": ["close teaser", "close offer", "close promotion"],
     "icons": ["x", "×", "✕", "✖"],
@@ -58,12 +65,12 @@
     "promotionalMedia": "\\b(?:newsletter|subscription|subscribe|promotions?|promotional|promo|coupons?|discounts?|sale|offers?|rewards?|bestsellers?|best sellers)\\b",
     "consentIdentity": "cookie|consent",
     "consentRegion": "banner|notice|consent",
-    "confirmedChoice": "you(?: have|'ve) (?:rejected|accepted)\\b.*cookies",
+    "confirmedChoice": "you(?: have|['’]ve) (?:rejected|accepted)\\b.*cookies",
     "necessaryOnly": "(?:we (?:only use|use only) (?:strictly )?(?:necessary|essential) cookies)",
     "strictlyNecessary": "strictly necessary cookies",
     "noOtherCookies": "will not use any other cookies",
     "signup": "\\b(?:subscribe|newsletter|mailing list|sign up|signing up)\\b",
-    "incentive": "\\b(?:rewards?|welcome gift|discount|first order|exclusive offers?)\\b",
+    "incentive": "\\b(?:rewards?|welcome gift|discount|first order|exclusive (?:benefits|offers?))\\b",
     "discount": "(?:[£￡$€¥]\\s*\\d+(?:[.,]\\d+)*|\\d+(?:[.,]\\d+)*\\s*%)\\s*off",
     "rewards": "\\b(?:redeem|claim) (?:your )?rewards?\\b"
   },

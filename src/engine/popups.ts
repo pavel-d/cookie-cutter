@@ -83,6 +83,11 @@ export function getCloseLabel(
   if (label && !rules.labels.icons.includes(label)) {
     return null;
   }
+  if (
+    rules.labels.icons.includes(label) &&
+    element.getAttribute("data-close-type") === "x_close"
+  )
+    return "close";
   const title = normalizeText(element.getAttribute("title"));
   const alt = normalizeText(element.getAttribute("alt"));
   if (rules.labels.close.includes(title)) {
@@ -202,7 +207,7 @@ function isOverlay(rules: MatcherRules, element: HTMLElement): boolean {
   );
 }
 
-function hasConsentText(rules: MatcherRules, element: HTMLElement): boolean {
+function visibleTextContent(element: HTMLElement): string {
   // Hidden signup panels can contain marketing consent inside a visible teaser.
   // Only rendered text should classify that teaser as a cookie/consent region.
   const walker = element.ownerDocument.createTreeWalker(
@@ -220,7 +225,11 @@ function hasConsentText(rules: MatcherRules, element: HTMLElement): boolean {
       visibleText.push(node.textContent);
     }
   }
-  const text = normalizeText(visibleText.join(" "));
+  return normalizeText(visibleText.join(" "));
+}
+
+function hasConsentText(rules: MatcherRules, element: HTMLElement): boolean {
+  const text = visibleTextContent(element);
   return rules.labels.consent.some((keyword) => text.includes(keyword));
 }
 
@@ -279,7 +288,7 @@ export function findPromotionalContainer(
     if (!isOverlay(rules, parent)) {
       continue;
     }
-    const text = normalizeText(parent.textContent);
+    const text = visibleTextContent(parent);
     const signup = rules.patterns.signup.test(text);
     const incentive =
       rules.patterns.incentive.test(text) || rules.patterns.discount.test(text);
